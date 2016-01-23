@@ -27,9 +27,9 @@
 #define AWS_IOT_MQTT_PORT              8883 ///< default port for MQTT/S
 #define AWS_IOT_MQTT_CLIENT_ID         "CameraTest" ///< MQTT client ID should be unique for every device
 #define AWS_IOT_MY_THING_NAME 		   "CameraTest" ///< Thing Name of the Shadow this device is associated with
-#define AWS_IOT_ROOT_CA_FILENAME       "root-ca.pem" ///< Root CA file name
-#define AWS_IOT_CERTIFICATE_FILENAME   "2dd9c753bf-certificate.pem.crt" ///< device signed certificate file name
-#define AWS_IOT_PRIVATE_KEY_FILENAME   "2dd9c753bf-private.pem.key" ///< Device private key filename
+#define AWS_IOT_ROOT_CA_FILENAME       "certs/root-ca.pem" ///< Root CA file name
+#define AWS_IOT_CERTIFICATE_FILENAME   "certs/2dd9c753bf-certificate.pem.crt" ///< device signed certificate file name
+#define AWS_IOT_PRIVATE_KEY_FILENAME   "certs/2dd9c753bf-private.pem.key" ///< Device private key filename
 // =================================================
 
 // MQTT PubSub
