@@ -78,7 +78,7 @@ BUILD = $(CC) $(CFLAGS) $(LDFLAGS)
 .PHONY:	all aws-objs clean dist debug cloudcam
 
 cloudcam: aws-iot.a
-	$(BUILD) -o cloudcam $(SRCS)  -L$(MBEDTLS_SRC_DIR) aws-iot.a
+	$(BUILD) -o cloudcam $(SRCS) aws-iot.a
 all:	$(PROGS)
 
 #$(PROGS): aws-iot.a
@@ -99,7 +99,10 @@ clean:
 	rm -f aws-iot.a 
 
 dist:
-	create-package.sh armv6
+	create-package.sh
+
+upload: dist
+	eap-install.sh install
 
 debug:
 	@echo $<
