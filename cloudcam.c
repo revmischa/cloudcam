@@ -6,8 +6,10 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <syslog.h>
 #include <limits.h>
+#include <fcntl.h>
 
 #include "aws_iot_log.h"
 #include "aws_iot_version.h"
@@ -17,6 +19,8 @@
 #define LOGINFO(fmt, args...)    { syslog(LOG_INFO, fmt, ## args); printf(fmt, ## args); }
 #define LOGERR(fmt, args...)     { syslog(LOG_CRIT, fmt, ## args); fprintf(stderr, fmt, ## args); }
 
+void test_pub_thumb();
+void test_pubsub();
 
 int MQTTcallbackHandler(MQTTCallbackParams params) {
   INFO("Subscribe callback");
@@ -32,10 +36,7 @@ void disconnectCallbackHandler(void) {
 }
 
 int main(int argc, char** argv) {
-  int publishCount = 5;
   IoT_Error_t rc = NONE_ERROR;
-  int32_t i = 0;
-  bool infinitePublishFlag = true;
 
   char rootCA[PATH_MAX + 1];
   char clientCRT[PATH_MAX + 1];
@@ -96,16 +97,23 @@ int main(int argc, char** argv) {
     }
   }
 
+  /*********/
+  test_pub_thumb();
+  /*********/
+
+  return 0;
+}
+
+void test_pubsub() {
+  IoT_Error_t rc = NONE_ERROR;
+  int publishCount = 5;
+  int32_t i = 0;
+  bool infinitePublishFlag = true;
+  MQTTPublishParams Params = MQTTPublishParamsDefault;
   MQTTMessageParams Msg = MQTTMessageParamsDefault;
   Msg.qos = QOS_0;
   char cPayload[100];
-  sprintf(cPayload, "%s : %d ", "hello from SDK", i);
-  Msg.pPayload = (void *) cPayload;
-
-
-  MQTTPublishParams Params = MQTTPublishParamsDefault;
   Params.pTopic = "sdkTest/sub";
-
 
   if(publishCount != 0){
     infinitePublishFlag = false;
@@ -131,7 +139,47 @@ int main(int argc, char** argv) {
   else{
     INFO("Publish done\n");
   }
-
-  return rc;
 }
 
+void test_pub_thumb() {
+  struct stat file_stat;
+  IoT_Error_t rc;
+  MQTTPublishParams Params = MQTTPublishParamsDefault;
+  Params.pTopic = "cloudcam/thumb/store";
+  MQTTMessageParams Msg = MQTTMessageParamsDefault;
+  Msg.qos = QOS_0;
+  Params.MessageParams = Msg;
+
+  // read image
+  int thumb_fh;
+  char sample_file[] = "sample/snowdino.jpg";
+  thumb_fh = open(sample_file, O_RDONLY);
+  if (thumb_fh == -1) {
+    ERROR("Error opening %s: %s", sample_file, strerror(errno));
+    return;
+  }
+  if (fstat(thumb_fh, &file_stat) != 0) {
+    close(thumb_fh);
+    ERROR("fstat error: %s", strerror(errno));
+    return;
+  }
+  long long file_size = (long long)file_stat.st_size;
+  uint8_t *img = (uint8_t *)malloc(file_size);
+  ssize_t bytes_read = read(thumb_fh, img, file_size);
+  if (bytes_read < file_size) {
+    ERROR("failed to read in image file");
+    close(thumb_fh);
+    return;
+  }
+  printf("read image bytes: %lld\n", (long long)bytes_read);
+  close(thumb_fh);
+
+  // publish image
+  Msg.pPayload = img;
+  rc = aws_iot_mqtt_publish(&Params);
+  if (rc == NONE_ERROR) {
+    INFO("published to %s", Params.pTopic);
+  } else {
+    ERROR("failed to publish to topic %s", Params.pTopic);
+  }
+}
