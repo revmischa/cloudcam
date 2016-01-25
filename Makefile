@@ -11,8 +11,9 @@ include $(AXIS_TOP_DIR)/tools/build/rules/common.mak
 
 ###### --- compile/linker flags
 CFLAGS += -Wall -g -O2
-LDFLAGS +=   # axis ACAP libs
-
+LDFLAGS += -L$(PWD)
+# axis ACAP libs
+# ...
 
 ###### --- aws_iot SDK + mbedTLS
 # main src dirs (relative to AXIS_TOP_DIR - change to wherever your AWS SDK lives)
@@ -67,7 +68,7 @@ AWS_SRC_FILES += $(MQTT_SRC_FILES)
 AWS_SRC_FILES += $(MBEDTLS_SRC_FILES)
 AWS_SRC_FILES += $(IOT_SRC_FILES)
 AWS_OBJS = $(AWS_SRC_FILES:.c=.o)
-
+AWS_LIB = libaws-iot.a
 
 ###### --- build flags
 CFLAGS += $(LOG_FLAGS)
@@ -77,26 +78,25 @@ BUILD = $(CC) $(CFLAGS) $(LDFLAGS)
 ###### --- targets
 .PHONY:	all aws-objs clean dist debug cloudcam
 
-cloudcam: aws-iot.a
-	$(BUILD) -o cloudcam $(SRCS) aws-iot.a
+cloudcam: $(AWS_LIB)
+	$(BUILD) -o cloudcam $(SRCS) -laws-iot
 all:	$(PROGS)
 
-#$(PROGS): aws-iot.a
-#	$(BUILD) $@.c aws-iot.a $(LDFLAGS) -o $@
+%.o: %.c
+	@echo Compiling $<
+	$(BUILD) -c -o $@ $<
 
-#%.o: %.c
-
-aws-objs: $(AWS_OBJS)
-	$(BUILD) -c $< -o $@
-aws-iot.a: aws-objs
-	ar rcs aws-iot.a $(AWS_OBJS)
+$(AWS_LIB): $(AWS_OBJS)
+	ar rcs $(AWS_LIB) $(AWS_OBJS)
 
 clean:
 	$(MAKE) -C $(MBEDTLS_DIR) clean
 	rm -f $(PROGS) *.o core
 	rm -f *.tar
-	rm -f $(AWS_OBJS)
-	rm -f aws-iot.a 
+	rm -f $(AWS_OBJS) $(AWS_LIB)
+
+distclean:
+	rm -f .target-makefrag
 
 dist:
 	create-package.sh
@@ -108,3 +108,8 @@ debug:
 	@echo $<
 	@echo $(AWS_OBJS)
 
+
+#$(PROGS): aws-iot.a
+#	$(BUILD) $@.c aws-iot.a $(LDFLAGS) -o $@
+
+#%.o: %.c

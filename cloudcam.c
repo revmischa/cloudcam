@@ -14,19 +14,13 @@
 #include "aws_iot_mqtt_interface.h"
 #include "aws_iot_config.h"
 
-#ifdef DEBUG
-#define D(x)    x
-#else
-#define D(x)
-#endif
-
 #define LOGINFO(fmt, args...)    { syslog(LOG_INFO, fmt, ## args); printf(fmt, ## args); }
 #define LOGERR(fmt, args...)     { syslog(LOG_CRIT, fmt, ## args); fprintf(stderr, fmt, ## args); }
 
 
 int MQTTcallbackHandler(MQTTCallbackParams params) {
-  LOGINFO("Subscribe callback");
-  LOGINFO("%.*s\t%.*s",
+  INFO("Subscribe callback");
+  INFO("%.*s\t%.*s",
        (int)params.TopicNameLen, params.pTopicName,
        (int)params.MessageParams.PayloadLen, (char*)params.MessageParams.pPayload);
 
@@ -53,7 +47,11 @@ int main(int argc, char** argv) {
 
   INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
-  getcwd(CurrentWD, sizeof(CurrentWD));
+  if (getcwd(CurrentWD, sizeof(CurrentWD)) == NULL) {
+    ERROR("getcwd failed");
+    return errno;
+  }
+  
   sprintf(rootCA, "%s/%s", CurrentWD, cafileName);
   sprintf(clientCRT, "%s/%s", CurrentWD, clientCRTName);
   sprintf(clientKey, "%s/%s", CurrentWD, clientKeyName);
