@@ -63,18 +63,18 @@ int main(int argc, char** argv) {
 
   MQTTConnectParams connectParams = MQTTConnectParamsDefault;
 
-  connectParams.KeepAliveInterval_sec = 10;
+  connectParams.KeepAliveInterval_sec = 60;
   connectParams.isCleansession = true;
   connectParams.MQTTVersion = MQTT_3_1_1;
-  connectParams.pClientID = "CSDK-test-device";
+  connectParams.pClientID = AWS_IOT_MQTT_CLIENT_ID;
   connectParams.pHostURL = AWS_IOT_MQTT_HOST;
   connectParams.port = AWS_IOT_MQTT_PORT;
   connectParams.isWillMsgPresent = false;
   connectParams.pRootCALocation = rootCA;
   connectParams.pDeviceCertLocation = clientCRT;
   connectParams.pDevicePrivateKeyLocation = clientKey;
-  connectParams.mqttCommandTimeout_ms = 2000;
-  connectParams.tlsHandshakeTimeout_ms = 5000;
+  connectParams.mqttCommandTimeout_ms = 10000;
+  connectParams.tlsHandshakeTimeout_ms = 10000;
   connectParams.isSSLHostnameVerify = true;// ensure this is set to true for production
   connectParams.disconnectHandler = disconnectCallbackHandler;
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
 
   MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault;
   subParams.mHandler = MQTTcallbackHandler;
-  subParams.pTopic = "sdkTest/sub";
+  subParams.pTopic = "cloudcam/thumb/store";
   subParams.qos = QOS_0;
 
   if (NONE_ERROR == rc) {
@@ -126,6 +126,7 @@ void test_pubsub() {
     sleep(1);
     sprintf(cPayload, "%s : %d ", "hello from SDK", i++);
     Msg.PayloadLen = strlen(cPayload) + 1;
+    Msg.pPayload = cPayload;
     Params.MessageParams = Msg;
     rc = aws_iot_mqtt_publish(&Params);
     if(publishCount > 0){
@@ -144,11 +145,10 @@ void test_pubsub() {
 void test_pub_thumb() {
   struct stat file_stat;
   IoT_Error_t rc;
-  MQTTPublishParams Params = MQTTPublishParamsDefault;
-  Params.pTopic = "cloudcam/thumb/store";
   MQTTMessageParams Msg = MQTTMessageParamsDefault;
   Msg.qos = QOS_0;
-  Params.MessageParams = Msg;
+  MQTTPublishParams Params = MQTTPublishParamsDefault;
+  Params.pTopic = "cloudcam/thumb/store";
 
   // read image
   int thumb_fh;
@@ -175,11 +175,26 @@ void test_pub_thumb() {
   close(thumb_fh);
 
   // publish image
-  Msg.pPayload = img;
+  char *t = "{\"abc\":123}";
+  Msg.pPayload = t;
+  Msg.PayloadLen = strlen(t) + 1;
+  //  Msg.pPayload = (void *) img;
+  //Msg.PayloadLen = 10;//bytes_read;
+
+  struct timeval start,end;
+  gettimeofday(&start, NULL);
+  Params.MessageParams = Msg;
   rc = aws_iot_mqtt_publish(&Params);
+  gettimeofday(&end, NULL);
+
+  long long sec = (long long)(end.tv_sec - start.tv_sec);
+  long long usec = (long long)(end.tv_usec - start.tv_usec);
+  printf("dur, sec: %lld, usec: %lld\n", sec, usec);
+  
   if (rc == NONE_ERROR) {
     INFO("published to %s", Params.pTopic);
+    aws_iot_mqtt_yield(1000);
   } else {
-    ERROR("failed to publish to topic %s", Params.pTopic);
+    ERROR("failed to publish to topic %s, rv=%d", Params.pTopic, rc);
   }
 }

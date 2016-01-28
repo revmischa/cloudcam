@@ -17,7 +17,7 @@ LDFLAGS += -L$(PWD)
 
 ###### --- aws_iot SDK + mbedTLS
 # main src dirs (relative to AXIS_TOP_DIR - change to wherever your AWS SDK lives)
-AWSIOT_DIR = $(AXIS_TOP_DIR)/linux_mqtt_mbedtls-1.0.1
+AWSIOT_DIR = $(AXIS_TOP_DIR)/../linux_mqtt_mbedtls-1.0.1
 MBEDTLS_DIR = $(AWSIOT_DIR)/mbedtls_lib
 
 # Logging level control
