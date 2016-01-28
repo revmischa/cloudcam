@@ -95,11 +95,11 @@ clean:
 	rm -f *.tar
 	rm -f $(AWS_OBJS) $(AWS_LIB)
 
-distclean:
+distclean: clean
 	rm -f .target-makefrag
 
 dist:
-	create-package.sh
+	create-package.sh armv6
 
 upload: dist
 	eap-install.sh install
