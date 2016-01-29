@@ -1,5 +1,5 @@
 ###### --- This application
-SRCS = cloudcam.c
+SRCS = src/cloudcam.c
 OBJS = $(SRCS:.c=.o)
 PROGS = cloudcam
 
@@ -17,7 +17,7 @@ LDFLAGS += -L$(PWD)
 
 ###### --- aws_iot SDK + mbedTLS
 # main src dirs (relative to AXIS_TOP_DIR - change to wherever your AWS SDK lives)
-AWSIOT_DIR = $(AXIS_TOP_DIR)/../linux_mqtt_mbedtls-1.0.1
+AWSIOT_DIR = $(AXIS_TOP_DIR)/linux_mqtt_mbedtls-1.0.1
 MBEDTLS_DIR = $(AWSIOT_DIR)/mbedtls_lib
 
 # Logging level control
@@ -94,6 +94,7 @@ clean:
 	rm -f $(PROGS) *.o core
 	rm -f *.tar
 	rm -f $(AWS_OBJS) $(AWS_LIB)
+	rm -f *.eap *.eap.old package.conf.orig
 
 distclean: clean
 	rm -f .target-makefrag
@@ -103,6 +104,10 @@ dist:
 
 upload: dist
 	eap-install.sh install
+	eap-install.sh start
+
+# build for host system not axis cam
+host: distclean cloudcam
 
 debug:
 	@echo $<

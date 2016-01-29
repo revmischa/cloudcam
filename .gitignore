@@ -1,3 +1,10 @@
+# axis files
+.eap-install.cfg
+
+# cloudcam certs
+certs/2dd9c753bf-certificate.pem.crt
+certs/2dd9c753bf-private.pem.key
+
 # Object files
 *.o
 *.ko

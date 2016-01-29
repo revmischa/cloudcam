@@ -1,23 +1,21 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <syslog.h>
 #include <limits.h>
 #include <fcntl.h>
 
-#include "aws_iot_log.h"
+// override logging with axis syslog logz
+#include "cloudcam_log.h"
+
 #include "aws_iot_version.h"
 #include "aws_iot_mqtt_interface.h"
 #include "aws_iot_config.h"
 
-#define LOGINFO(fmt, args...)    { syslog(LOG_INFO, fmt, ## args); printf(fmt, ## args); }
-#define LOGERR(fmt, args...)     { syslog(LOG_CRIT, fmt, ## args); fprintf(stderr, fmt, ## args); }
 
 void test_pub_thumb();
 void test_pubsub();
