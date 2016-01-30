@@ -39,10 +39,13 @@ class CloudCam:
 
         self.setNTP()
 
-        # write out hostname/pw to ACAP upload config file
-        with open(".eap-install.cfg", 'x') as f:
-            f.write("axis_device_ip=%s\npassword=%s" % (args.address, args.password))
-            f.close()
+        # write out hostname/pw to ACAP upload config file (if one doesn't exist already)
+        try:
+            with open(".eap-install.cfg", 'x') as f:
+                f.write("axis_device_ip=%s\npassword=%s" % (args.address, args.password))
+                f.close()
+        except FileExistsError as e:
+            pass
                 
         
     def request(self, data={}):
