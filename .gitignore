@@ -1,5 +1,14 @@
+# binary
+cloudcam
+
 # axis files
 .eap-install.cfg
+.target-makefrag
+*.var_log_messages.txt
+*.var_log_messages.old
+*.eap
+*.eap.old
+package.conf.orig
 
 # cloudcam certs
 certs/2dd9c753bf-certificate.pem.crt

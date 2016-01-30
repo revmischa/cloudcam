@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <fcntl.h>
+#include <libgen.h>
 
 // override logging with axis syslog logz
 #include "cloudcam_log.h"
@@ -16,6 +17,7 @@
 #include "aws_iot_mqtt_interface.h"
 #include "aws_iot_config.h"
 
+char *dir;
 
 void test_pub_thumb();
 void test_pubsub();
@@ -34,30 +36,35 @@ void disconnectCallbackHandler(void) {
 }
 
 int main(int argc, char** argv) {
+  openlog("cloudcam", LOG_PID | LOG_CONS, LOG_USER);
+
+  char exepath[PATH_MAX + 1];
+  ssize_t count = readlink("/proc/self/exe", exepath, PATH_MAX);
+  if (count <= 0) {
+    ERROR("Failed to find binary directory");
+    return 1;
+  }
+  dir = dirname(exepath);
+  INFO("current dir: %s\n", dir);
+  
   IoT_Error_t rc = NONE_ERROR;
 
   char rootCA[PATH_MAX + 1];
   char clientCRT[PATH_MAX + 1];
   char clientKey[PATH_MAX + 1];
-  char CurrentWD[PATH_MAX + 1];
   char cafileName[] = AWS_IOT_ROOT_CA_FILENAME;
   char clientCRTName[] = AWS_IOT_CERTIFICATE_FILENAME;
   char clientKeyName[] = AWS_IOT_PRIVATE_KEY_FILENAME;
 
   INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
-  if (getcwd(CurrentWD, sizeof(CurrentWD)) == NULL) {
-    ERROR("getcwd failed");
-    return errno;
-  }
-  
-  sprintf(rootCA, "%s/%s", CurrentWD, cafileName);
-  sprintf(clientCRT, "%s/%s", CurrentWD, clientCRTName);
-  sprintf(clientKey, "%s/%s", CurrentWD, clientKeyName);
+  sprintf(rootCA, "%s/%s", dir, cafileName);
+  sprintf(clientCRT, "%s/%s", dir, clientCRTName);
+  sprintf(clientKey, "%s/%s", dir, clientKeyName);
 
-  DEBUG("rootCA %s", rootCA);
-  DEBUG("clientCRT %s", clientCRT);
-  DEBUG("clientKey %s", clientKey);
+  INFO("rootCA %s", rootCA);
+  INFO("clientCRT %s", clientCRT);
+  INFO("clientKey %s", clientKey);
 
   MQTTConnectParams connectParams = MQTTConnectParamsDefault;
 
@@ -99,6 +106,7 @@ int main(int argc, char** argv) {
   test_pub_thumb();
   /*********/
 
+  closelog();
   return 0;
 }
 
@@ -150,7 +158,8 @@ void test_pub_thumb() {
 
   // read image
   int thumb_fh;
-  char sample_file[] = "sample/snowdino.jpg";
+  char sample_file[PATH_MAX + 1];
+  snprintf(sample_file, sizeof(sample_file), "%s/%s", dir, "sample/snowdino.jpg");
   thumb_fh = open(sample_file, O_RDONLY);
   if (thumb_fh == -1) {
     ERROR("Error opening %s: %s", sample_file, strerror(errno));
