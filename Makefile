@@ -1,13 +1,23 @@
 ###### --- This application
-SRCS = src/cloudcam.c
+SRCS = src/cloudcam.c src/log.c
 OBJS = $(SRCS:.c=.o)
 PROGS = cloudcam
 
+INCLUDE_DIRS += -Iinclude
 
 ###### --- Axis build settings
 AXIS_USABLE_LIBS = UCLIBC GLIBC
-include $(AXIS_TOP_DIR)/tools/build/rules/common.mak
+NO_SUBDIR_RECURSION = 1
+include $(AXIS_TOP_DIR)/tools/build/Rules.axis
+#include $(AXIS_TOP_DIR)/tools/build/rules/common.mak
 
+###### --- Host/Cross-compile defines
+ifeq ($(AXIS_BUILDTYPE),host)
+CFLAGS += -DCLOUDCAM_TARGET_HOST -DCLOUDCAM_LOG_DUPOUT
+else
+CFLAGS += -DCLOUDCAM_TARGET_AXIS
+CFLAGS += -DREVERSED # for armv6
+endif # AXIS_BUILDTYPE == host
 
 ###### --- compile/linker flags
 CFLAGS += -Wall -g -O2
@@ -68,7 +78,7 @@ AWS_SRC_FILES += $(MQTT_SRC_FILES)
 AWS_SRC_FILES += $(MBEDTLS_SRC_FILES)
 AWS_SRC_FILES += $(IOT_SRC_FILES)
 AWS_OBJS = $(AWS_SRC_FILES:.c=.o)
-AWS_LIB = libaws-iot.a
+AWS_LIB = lib/libaws-iot.a
 
 ###### --- build flags
 CFLAGS += $(LOG_FLAGS)
@@ -79,24 +89,27 @@ BUILD = $(CC) $(CFLAGS) $(LDFLAGS)
 .PHONY:	all aws-objs clean dist debug cloudcam
 
 cloudcam: $(AWS_LIB)
-	$(BUILD) -o cloudcam $(SRCS) -laws-iot
+	$(BUILD) -o cloudcam $(SRCS) -Llib -laws-iot
 all:	$(PROGS)
 
 %.o: %.c
 	@echo Compiling $<
 	$(BUILD) -c -o $@ $<
 
-$(AWS_LIB): $(AWS_OBJS)
+$(AWS_LIB): lib $(AWS_OBJS)
 	ar rcs $(AWS_LIB) $(AWS_OBJS)
 
-clean:
-	$(MAKE) -C $(MBEDTLS_DIR) clean
+clean: clean-aws clean-prog clean-mbedtls clean-eap clean-target
+clean-prog:
 	rm -f $(PROGS) *.o core
-	rm -f *.tar
+clean-aws:
 	rm -f $(AWS_OBJS) $(AWS_LIB)
+clean-mbedtls:
+	$(MAKE) -C $(MBEDTLS_DIR) clean
+clean-eap:
+	rm -f *.tar
 	rm -f *.eap *.eap.old package.conf.orig
-
-distclean: clean
+clean-target:
 	rm -f .target-makefrag
 
 dist:
@@ -109,9 +122,11 @@ upload: dist
 # build for host system not axis cam
 host: distclean cloudcam
 
+lib:
+	mkdir -p lib
+
 debug:
-	@echo $<
-	@echo $(AWS_OBJS)
+	@echo Buildtype: $(AXIS_BUILDTYPE)
 
 
 #$(PROGS): aws-iot.a

@@ -11,7 +11,7 @@
 #include <libgen.h>
 
 // override logging with axis syslog logz
-#include "cloudcam_log.h"
+#include "cloudcam/log.h"
 
 #include "aws_iot_version.h"
 #include "aws_iot_mqtt_interface.h"
@@ -21,6 +21,7 @@ char *dir;
 
 void test_pub_thumb();
 void test_pubsub();
+void cleanup();
 
 int MQTTcallbackHandler(MQTTCallbackParams params) {
   INFO("Subscribe callback");
@@ -38,6 +39,9 @@ void disconnectCallbackHandler(void) {
 int main(int argc, char** argv) {
   openlog("cloudcam", LOG_PID | LOG_CONS, LOG_USER);
 
+  tolog(&stdout);
+  tolog(&stderr);
+  
   char exepath[PATH_MAX + 1];
   ssize_t count = readlink("/proc/self/exe", exepath, PATH_MAX);
   if (count <= 0) {
@@ -87,6 +91,8 @@ int main(int argc, char** argv) {
   rc = aws_iot_mqtt_connect(&connectParams);
   if (NONE_ERROR != rc) {
     ERROR("Error(%d) connecting to %s:%d", rc, connectParams.pHostURL, connectParams.port);
+    cleanup();
+    exit(1);
   }
 
   MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault;
@@ -106,8 +112,12 @@ int main(int argc, char** argv) {
   test_pub_thumb();
   /*********/
 
-  closelog();
+  cleanup();
   return 0;
+}
+
+void cleanup() {
+  closelog();
 }
 
 void test_pubsub() {
@@ -205,3 +215,5 @@ void test_pub_thumb() {
     ERROR("failed to publish to topic %s, rv=%d", Params.pTopic, rc);
   }
 }
+
+
