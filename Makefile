@@ -4,23 +4,25 @@ OBJS = $(SRCS:.c=.o)
 PROGS = cloudcam
 
 INCLUDE_DIRS += -Iinclude
+CFLAGS += -DCLOUDCAM_TARGET_AXIS
 
 ###### --- Axis build settings
 AXIS_USABLE_LIBS = UCLIBC GLIBC
 NO_SUBDIR_RECURSION = 1
-include $(AXIS_TOP_DIR)/tools/build/Rules.axis
-#include $(AXIS_TOP_DIR)/tools/build/rules/common.mak
+AXIS_OPT_DEBUG = 1
+#include $(AXIS_TOP_DIR)/tools/build/Rules.axis
+include $(AXIS_TOP_DIR)/tools/build/rules/common.mak
 
 ###### --- Host/Cross-compile defines
 ifeq ($(AXIS_BUILDTYPE),host)
-CFLAGS += -DCLOUDCAM_TARGET_HOST -DCLOUDCAM_LOG_DUPOUT
-else
-CFLAGS += -DCLOUDCAM_TARGET_AXIS
-CFLAGS += -DREVERSED # for armv6
-endif # AXIS_BUILDTYPE == host
+  CFLAGS += -DCLOUDCAM_LOG_DUPOUT
+else ifeq ($(AXIS_BUILDTYPE),armv6-axis-linux-gnueabi)
+  #CFLAGS += -DREVERSED # for armv6
+endif # AXIS_BUILDTYPE
 
 ###### --- compile/linker flags
-CFLAGS += -Wall -g -O2
+CFLAGS += -Wall -g
+#CFLAGS += -Wall -g -O2  ---- -O2 breaks mbedTLS on ARM
 LDFLAGS += -L$(PWD)
 # axis ACAP libs
 # ...
@@ -94,7 +96,7 @@ all:	$(PROGS)
 
 %.o: %.c
 	@echo Compiling $<
-	$(BUILD) -c -o $@ $<
+	@$(BUILD) -c -o $@ $<
 
 $(AWS_LIB): lib $(AWS_OBJS)
 	ar rcs $(AWS_LIB) $(AWS_OBJS)
@@ -125,11 +127,3 @@ host: distclean cloudcam
 lib:
 	mkdir -p lib
 
-debug:
-	@echo Buildtype: $(AXIS_BUILDTYPE)
-
-
-#$(PROGS): aws-iot.a
-#	$(BUILD) $@.c aws-iot.a $(LDFLAGS) -o $@
-
-#%.o: %.c
