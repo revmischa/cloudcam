@@ -33,7 +33,7 @@ AWSIOT_DIR = $(AXIS_TOP_DIR)/linux_mqtt_mbedtls-1.0.1
 MBEDTLS_DIR = $(AWSIOT_DIR)/mbedtls_lib
 
 # Logging level control
-LOG_FLAGS += -DIOT_DEBUG
+#LOG_FLAGS += -DIOT_DEBUG
 LOG_FLAGS += -DIOT_INFO
 LOG_FLAGS += -DIOT_WARN
 LOG_FLAGS += -DIOT_ERROR
@@ -88,7 +88,7 @@ CFLAGS += $(INCLUDE_DIRS)
 BUILD = $(CC) $(CFLAGS) $(LDFLAGS)
 
 ###### --- targets
-.PHONY:	all aws-objs clean dist debug cloudcam
+.PHONY:	all aws-objs clean dist debug cloudcam host
 
 cloudcam: $(AWS_LIB)
 	$(BUILD) -o cloudcam $(SRCS) -Llib -laws-iot
