@@ -1,5 +1,5 @@
 ###### --- This application
-SRCS = src/cloudcam.c src/log.c
+SRCS = src/cloudcam.c src/log.c src/iot.c
 OBJS = $(SRCS:.c=.o)
 PROGS = cloudcam
 

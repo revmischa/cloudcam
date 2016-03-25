@@ -12,10 +12,8 @@
 
 // override logging with axis syslog logz
 #include "cloudcam/log.h"
-
-#include "aws_iot_version.h"
-#include "aws_iot_mqtt_interface.h"
-#include "aws_iot_config.h"
+// AWS IoT interfacing
+#include "cloudcam/iot.h"
 
 char *dir;
 
@@ -95,21 +93,27 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault;
-  subParams.mHandler = MQTTcallbackHandler;
-  subParams.pTopic = "cloudcam/thumb/store";
-  subParams.qos = QOS_0;
+  // subscribe to topics
+  cloudcam_iot_subscribe();
 
-  if (NONE_ERROR == rc) {
-    INFO("Subscribing...");
-    rc = aws_iot_mqtt_subscribe(&subParams);
-    if (NONE_ERROR != rc) {
-      ERROR("Error subscribing");
-    }
-  }
 
+  
+  /* MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault; */
+  /* subParams.mHandler = MQTTcallbackHandler; */
+  /* subParams.pTopic = "cloudcam/thumb/store"; */
+  /* subParams.qos = QOS_0; */
+
+  /* if (NONE_ERROR == rc) { */
+  /*   INFO("Subscribing..."); */
+  /*   rc = aws_iot_mqtt_subscribe(&subParams); */
+  /*   if (NONE_ERROR != rc) { */
+  /*     ERROR("Error subscribing"); */
+  /*   } */
+  /* } */
+  
   /*********/
   test_pub_thumb();
+  cloudcam_iot_poll_loop();
   /*********/
 
   cleanup();
@@ -201,6 +205,8 @@ void test_pub_thumb() {
   struct timeval start,end;
   gettimeofday(&start, NULL);
   Params.MessageParams = Msg;
+  // when this is published, a message will be sent back on
+  // cloudcam/thumb/request_snapshot
   rc = aws_iot_mqtt_publish(&Params);
   gettimeofday(&end, NULL);
 
@@ -210,7 +216,6 @@ void test_pub_thumb() {
   
   if (rc == NONE_ERROR) {
     INFO("published to %s", Params.pTopic);
-    aws_iot_mqtt_yield(1000);
   } else {
     ERROR("failed to publish to topic %s, rv=%d", Params.pTopic, rc);
   }
