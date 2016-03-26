@@ -50,7 +50,9 @@ int main(int argc, char** argv) {
   INFO("current dir: %s\n", dir);
   
   IoT_Error_t rc = NONE_ERROR;
-
+  MQTTClient_t mc;
+  aws_iot_mqtt_init(&mc);
+  
   char rootCA[PATH_MAX + 1];
   char clientCRT[PATH_MAX + 1];
   char clientKey[PATH_MAX + 1];
@@ -68,29 +70,23 @@ int main(int argc, char** argv) {
   INFO("clientCRT %s", clientCRT);
   INFO("clientKey %s", clientKey);
 
-  MQTTConnectParams connectParams = MQTTConnectParamsDefault;
+  ShadowParameters_t sp = ShadowParametersDefault;
+  sp.pMyThingName = AWS_IOT_MY_THING_NAME;
+  sp.pMqttClientId = AWS_IOT_MQTT_CLIENT_ID;
+  sp.pHost = AWS_IOT_MQTT_HOST;
+  sp.port = AWS_IOT_MQTT_PORT;
+  sp.pClientCRT = clientCRT;
+  sp.pClientKey = clientKey;
+  sp.pRootCA = rootCA;
 
-  connectParams.KeepAliveInterval_sec = 60;
-  connectParams.isCleansession = true;
-  connectParams.MQTTVersion = MQTT_3_1_1;
-  connectParams.pClientID = AWS_IOT_MQTT_CLIENT_ID;
-  connectParams.pHostURL = AWS_IOT_MQTT_HOST;
-  connectParams.port = AWS_IOT_MQTT_PORT;
-  connectParams.isWillMsgPresent = false;
-  connectParams.pRootCALocation = rootCA;
-  connectParams.pDeviceCertLocation = clientCRT;
-  connectParams.pDevicePrivateKeyLocation = clientKey;
-  connectParams.mqttCommandTimeout_ms = 10000;
-  connectParams.tlsHandshakeTimeout_ms = 10000;
-  connectParams.isSSLHostnameVerify = true;// ensure this is set to true for production
-  connectParams.disconnectHandler = disconnectCallbackHandler;
+  INFO("Shadow Init");
+  rc = aws_iot_shadow_init(&mc);
 
-  INFO("Connecting...");
-  rc = aws_iot_mqtt_connect(&connectParams);
+  INFO("Shadow Connect");
+  rc = aws_iot_shadow_connect(&mc, &sp);
+
   if (NONE_ERROR != rc) {
-    ERROR("Error(%d) connecting to %s:%d", rc, connectParams.pHostURL, connectParams.port);
-    cleanup();
-    exit(1);
+    ERROR("Shadow Connection Error %d", rc);
   }
 
   INFO("Enabling auto-reconnect...");
@@ -121,7 +117,7 @@ int main(int argc, char** argv) {
   
   /*********/
   test_pub_thumb();
-  cloudcam_iot_poll_loop();
+  cloudcam_iot_poll_loop(&mc);
   /*********/
 
   cleanup();

@@ -37,12 +37,12 @@ int thumbnail_requested_handler(MQTTCallbackParams params) {
 }
 
 // sit and wait for messages
-void cloudcam_iot_poll_loop() {
+void cloudcam_iot_poll_loop(MQTTClient_t *mc) {
   IoT_Error_t rc = NONE_ERROR;
 
   while (rc == NONE_ERROR || rc == NETWORK_ATTEMPTING_RECONNECT || rc == RECONNECT_SUCCESSFUL) {
     sleep(1);
-    rc = aws_iot_mqtt_yield(1000);
+    rc = aws_iot_shadow_yield(mc, 1000);
   }
   INFO("rc=%d\n", rc);
 }
