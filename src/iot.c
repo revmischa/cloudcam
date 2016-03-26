@@ -32,6 +32,7 @@ void cloudcam_iot_subscribe() {
 
 // callback when server requests a new thumbnail
 int thumbnail_requested_handler(MQTTCallbackParams params) {
+  printf("thumb requested handler\n");
   return 0;
 }
 
@@ -39,9 +40,9 @@ int thumbnail_requested_handler(MQTTCallbackParams params) {
 void cloudcam_iot_poll_loop() {
   IoT_Error_t rc = NONE_ERROR;
 
-  while (rc == NONE_ERROR) {
+  while (rc == NONE_ERROR || rc == NETWORK_ATTEMPTING_RECONNECT || rc == RECONNECT_SUCCESSFUL) {
     sleep(1);
-    rc = aws_iot_mqtt_yield(4000);
+    rc = aws_iot_mqtt_yield(1000);
   }
   INFO("rc=%d\n", rc);
 }

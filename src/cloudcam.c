@@ -93,9 +93,17 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
+  INFO("Enabling auto-reconnect...");
+  rc = aws_iot_mqtt_autoreconnect_set_status(1);
+  if (rc != NONE_ERROR) {
+    ERROR("Error(%d) enabling auto-reconnect", rc);
+    cleanup();
+    exit(1);
+  }
+
+
   // subscribe to topics
   cloudcam_iot_subscribe();
-
 
   
   /* MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault; */

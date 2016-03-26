@@ -32,9 +32,15 @@
 #define AWS_IOT_PRIVATE_KEY_FILENAME   "certs/2dd9c753bf-private.pem.key" ///< Device private key filename
 // =================================================
 
+
+// Auto Reconnect specific config
+#define AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL 1000 ///< Minimum time before the First reconnect attempt is made as part of the exponential back-off algorithm
+#define AWS_IOT_MQTT_MAX_RECONNECT_WAIT_INTERVAL 8000 ///< Maximum time interval after which exponential back-off will stop attempting to reconnect.
+
+
 // MQTT PubSub
 #define AWS_IOT_MQTT_TX_BUF_LEN 512 ///< Any time a message is sent out through the MQTT layer. The message is copied into this buffer anytime a publish is done. This will also be used in the case of Thing Shadow
-#define AWS_IOT_MQTT_RX_BUF_LEN 512 ///< Any message that comes into the device should be less than this buffer size. If a received message is bigger than this buffer size the message will be dropped.
+#define AWS_IOT_MQTT_RX_BUF_LEN 8192 ///< Any message that comes into the device should be less than this buffer size. If a received message is bigger than this buffer size the message will be dropped.
 #define AWS_IOT_MQTT_NUM_SUBSCRIBE_HANDLERS 5 ///< Maximum number of topic filters the MQTT client can handle at any given time. This should be increased appropriately when using Thing Shadow
 
 // Thing Shadow specific configs
