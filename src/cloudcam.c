@@ -81,44 +81,27 @@ int main(int argc, char** argv) {
 
   INFO("Shadow Init");
   rc = aws_iot_shadow_init(&mc);
+  if (rc != NONE_ERROR)
+    ERROR("Shadow init error %d", rc);
 
   INFO("Shadow Connect");
   rc = aws_iot_shadow_connect(&mc, &sp);
-
-  if (NONE_ERROR != rc) {
+  if (rc != NONE_ERROR)
     ERROR("Shadow Connection Error %d", rc);
-  }
 
   INFO("Enabling auto-reconnect...");
-  rc = aws_iot_mqtt_autoreconnect_set_status(1);
+  rc = mc.setAutoReconnectStatus(true);
   if (rc != NONE_ERROR) {
     ERROR("Error(%d) enabling auto-reconnect", rc);
     cleanup();
     exit(1);
   }
 
+  // subscribe to topics and shadow deltas
+  cloudcam_iot_subscribe(&mc);
 
-  // subscribe to topics
-  cloudcam_iot_subscribe();
-
-  
-  /* MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault; */
-  /* subParams.mHandler = MQTTcallbackHandler; */
-  /* subParams.pTopic = "cloudcam/thumb/store"; */
-  /* subParams.qos = QOS_0; */
-
-  /* if (NONE_ERROR == rc) { */
-  /*   INFO("Subscribing..."); */
-  /*   rc = aws_iot_mqtt_subscribe(&subParams); */
-  /*   if (NONE_ERROR != rc) { */
-  /*     ERROR("Error subscribing"); */
-  /*   } */
-  /* } */
-  
-  /*********/
   test_pub_thumb();
   cloudcam_iot_poll_loop(&mc);
-  /*********/
 
   cleanup();
   return 0;
@@ -126,44 +109,6 @@ int main(int argc, char** argv) {
 
 void cleanup() {
   closelog();
-}
-
-void test_pubsub() {
-  IoT_Error_t rc = NONE_ERROR;
-  int publishCount = 5;
-  int32_t i = 0;
-  bool infinitePublishFlag = true;
-  MQTTPublishParams Params = MQTTPublishParamsDefault;
-  MQTTMessageParams Msg = MQTTMessageParamsDefault;
-  Msg.qos = QOS_0;
-  char cPayload[100];
-  Params.pTopic = "sdkTest/sub";
-
-  if(publishCount != 0){
-    infinitePublishFlag = false;
-  }
-
-  while (NONE_ERROR == rc && (publishCount > 0 || infinitePublishFlag)) {
-    //Max time the yield function will wait for read messages
-    rc = aws_iot_mqtt_yield(100);
-    INFO("-->sleep");
-    sleep(1);
-    sprintf(cPayload, "%s : %d ", "hello from SDK", i++);
-    Msg.PayloadLen = strlen(cPayload) + 1;
-    Msg.pPayload = cPayload;
-    Params.MessageParams = Msg;
-    rc = aws_iot_mqtt_publish(&Params);
-    if(publishCount > 0){
-      publishCount--;
-    }
-  }
-
-  if (NONE_ERROR != rc){
-    ERROR("An error occurred in the loop.\n");
-  }
-  else{
-    INFO("Publish done\n");
-  }
 }
 
 void test_pub_thumb() {

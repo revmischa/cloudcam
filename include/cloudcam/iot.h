@@ -6,6 +6,7 @@
 #include "aws_iot_config.h"
 #include "aws_iot_shadow_interface.h"
 
+void shadow_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js);
 void cloudcam_iot_poll_loop(MQTTClient_t *mc);
 int thumbnail_requested_handler(MQTTCallbackParams params);
 void cloudcam_iot_subscribe();
