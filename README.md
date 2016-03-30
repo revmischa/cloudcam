@@ -16,10 +16,12 @@ There is full support for embedded linux. Video streaming will be done with gstr
 3. Report any issues
 
 ## Dependencies:
-### mbedTLS:
 ```
-wget https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar
-tar -xf linux_mqtt_mbedtls-1.1.0.tar
+# mbedTLS
+curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > linux_mqtt_mbedtls.tar
+tar -xf linux_mqtt_mbedtls.tar
+rm linux_mqtt_mbedtls.tar
+
+# AWS IoT Embedded C
+git clone https://github.com/aws/aws-iot-device-sdk-embedded-C.git aws_iot_client
 ```
-### AWS IoT Embedded C
-`git clone https://github.com/aws/aws-iot-device-sdk-embedded-C.git aws_iot_client`
