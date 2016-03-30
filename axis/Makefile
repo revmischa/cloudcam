@@ -11,7 +11,7 @@ AXIS_USABLE_LIBS = UCLIBC GLIBC
 NO_SUBDIR_RECURSION = 1
 AXIS_OPT_DEBUG = 1
 #include $(AXIS_TOP_DIR)/tools/build/Rules.axis
-include $(AXIS_TOP_DIR)/tools/build/rules/common.mak
+-include $(AXIS_TOP_DIR)/tools/build/rules/common.mak
 
 ###### --- Host/Cross-compile defines
 ifeq ($(AXIS_BUILDTYPE),host)
