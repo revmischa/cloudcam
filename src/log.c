@@ -1,3 +1,5 @@
+#ifdef LINUX
+
 #define _GNU_SOURCE   // for cookie_io_functions_t
 #include "cloudcam/log.h"
 
@@ -34,3 +36,13 @@ void tolog(FILE **pfp) {
   old_outfh = *pfp;
   setvbuf(*pfp = fopencookie(NULL, "w", log_fns), NULL, _IOLBF, 0);
 }
+
+#else //LINUX
+
+#include "cloudcam/log.h"
+void tolog(FILE **pfp) {
+// no-op
+}
+
+#endif //LINUX
+
