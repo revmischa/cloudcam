@@ -8,7 +8,6 @@ INCLUDE_DIRS += -Iinclude
 ###### --- compile/linker flags
 CFLAGS += -Wall -g
 #CFLAGS += -Wall -g -O2  ---- -O2 breaks mbedTLS on ARM
-LDFLAGS += -L$(PWD)
 
 ###### --- aws_iot SDK + mbedTLS
 # main src dirs (relative to AXIS_TOP_DIR - change to wherever your AWS SDK lives)
@@ -19,7 +18,7 @@ MBEDTLS_DIR = mbedtls_lib
 AXIS_DIR = axis
 
 # Logging level control
-#LOG_FLAGS += -DIOT_DEBUG  # enable this for debug logs
+LOG_FLAGS += -DIOT_DEBUG  # enable this for debug logs
 LOG_FLAGS += -DIOT_INFO
 LOG_FLAGS += -DIOT_WARN
 LOG_FLAGS += -DIOT_ERROR
