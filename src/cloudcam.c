@@ -40,13 +40,7 @@ int main(int argc, char** argv) {
   tolog(&stdout);
   tolog(&stderr);
   
-  char exepath[PATH_MAX + 1];
-  ssize_t count = readlink("/proc/self/exe", exepath, PATH_MAX);
-  if (count <= 0) {
-    ERROR("Failed to find binary directory");
-    return 1;
-  }
-  dir = dirname(exepath);
+  dir = dirname(argv[0]);
   INFO("current dir: %s\n", dir);
   
   IoT_Error_t rc = NONE_ERROR;
@@ -69,6 +63,8 @@ int main(int argc, char** argv) {
   INFO("rootCA %s", rootCA);
   INFO("clientCRT %s", clientCRT);
   INFO("clientKey %s", clientKey);
+
+  // TODO: verify cert files exist
 
   ShadowParameters_t sp = ShadowParametersDefault;
   sp.pMyThingName = AWS_IOT_MY_THING_NAME;
