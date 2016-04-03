@@ -25,7 +25,7 @@ LOG_FLAGS += -DIOT_ERROR
 
 # mbedtls
 MBEDTLS_SRC_DIR = $(MBEDTLS_DIR)/library
-MBEDTLS_SRC_FILES += $(shell find $(MBEDTLS_SRC_DIR)/ -name '*.c')
+MBEDTLS_SRC_FILES += $(shell find $(MBEDTLS_SRC_DIR)/ -nowarn -name '*.c')
 TLS_INCLUDE_DIR = -I $(MBEDTLS_DIR)/include
 # aws_iot client/platform/shadow
 IOT_CLIENT_DIR=$(AWSIOT_DIR)/aws_iot_src
@@ -44,16 +44,16 @@ IOT_INCLUDE_DIRS += -I config
 IOT_SRC_FILES += $(IOT_CLIENT_DIR)/protocol/mqtt/aws_iot_embedded_client_wrapper/aws_iot_mqtt_embedded_client_wrapper.c
 IOT_SRC_FILES += $(IOT_CLIENT_DIR)/utils/jsmn.c
 IOT_SRC_FILES += $(IOT_CLIENT_DIR)/utils/aws_iot_json_utils.c
-IOT_SRC_FILES += $(shell find $(PLATFORM_DIR)/ -name '*.c')
-IOT_SRC_FILES += $(shell find $(PLATFORM_COMMON_DIR)/ -name '*.c')
-IOT_SRC_FILES += $(shell find $(SHADOW_SRC_DIR)/ -name '*.c')
+IOT_SRC_FILES += $(shell find $(PLATFORM_DIR)/ -nowarn -name '*.c')
+IOT_SRC_FILES += $(shell find $(PLATFORM_COMMON_DIR)/ -nowarn -name '*.c')
+IOT_SRC_FILES += $(shell find $(SHADOW_SRC_DIR)/ -nowarn -name '*.c')
 # MQTT Paho Embedded C client directory
 MQTT_DIR = $(AWSIOT_DIR)/aws_mqtt_embedded_client_lib
 MQTT_C_DIR = $(MQTT_DIR)/MQTTClient-C/src
 MQTT_EMB_DIR = $(MQTT_DIR)/MQTTPacket/src
 MQTT_INCLUDE_DIR += -I $(MQTT_EMB_DIR)
 MQTT_INCLUDE_DIR += -I $(MQTT_C_DIR)
-MQTT_SRC_FILES += $(shell find $(MQTT_EMB_DIR)/ -name '*.c')
+MQTT_SRC_FILES += $(shell find $(MQTT_EMB_DIR)/ -nowarn -name '*.c')
 MQTT_SRC_FILES += $(MQTT_C_DIR)/MQTTClient.c
 # aws_iot include dirs
 INCLUDE_DIRS += $(IOT_INCLUDE_DIRS) 
@@ -110,3 +110,11 @@ host: distclean cloudcam
 lib:
 	mkdir -p lib
 
+
+dep: $(AWSIOT_DIR) mbedtls_lib
+$(AWSIOT_DIR):
+	git clone https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(AWSIOT_DIR)
+$(MBEDTLS_DIR):
+	mkdir $(MBEDTLS_DIR)
+	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > $(MBEDTLS_DIR)/linux_mqtt_mbedtls.tar
+	cd $(MBEDTLS_DIR); tar -xf linux_mqtt_mbedtls.tar; rm linux_mqtt_mbedtls.tar
