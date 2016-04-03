@@ -75,7 +75,7 @@ BUILD = $(CC) $(CFLAGS) $(LDFLAGS)
 ###### --- targets
 .PHONY:	all aws-objs clean dist debug cloudcam host
 
-cloudcam: $(AWS_LIB)
+cloudcam: dep $(AWS_LIB)
 	$(BUILD) -o cloudcam $(SRCS) -Llib -laws-iot
 all:	$(PROGS)
 
@@ -115,6 +115,6 @@ dep: $(AWSIOT_DIR) mbedtls_lib
 $(AWSIOT_DIR):
 	git clone https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(AWSIOT_DIR)
 $(MBEDTLS_DIR):
-	mkdir $(MBEDTLS_DIR)
-	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > $(MBEDTLS_DIR)/linux_mqtt_mbedtls.tar
-	cd $(MBEDTLS_DIR); tar -xf linux_mqtt_mbedtls.tar; rm linux_mqtt_mbedtls.tar
+	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > linux_mqtt_mbedtls.tar
+	tar -xf linux_mqtt_mbedtls.tar mbedtls_lib
+	rm linux_mqtt_mbedtls.tar

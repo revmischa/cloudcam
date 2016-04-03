@@ -11,17 +11,7 @@ This is based on open source as much as humanly possible. Contributions are enco
 There is full support for embedded linux. Video streaming will be done with gstreamer.  
 
 # Building:
-1. Get dependencies
-2. Type `make`
-3. Report any issues
+1. Type `make`
+2. [Report any issues](https://github.com/revmischa/cloudcam/issues/new)
 
-## Dependencies:
-```
-# mbedTLS
-curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > linux_mqtt_mbedtls.tar
-tar -xf linux_mqtt_mbedtls.tar
-rm linux_mqtt_mbedtls.tar
 
-# AWS IoT Embedded C
-git clone https://github.com/aws/aws-iot-device-sdk-embedded-C.git aws_iot_client
-```
