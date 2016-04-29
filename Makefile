@@ -113,7 +113,7 @@ lib:
 
 dep: $(AWSIOT_DIR) mbedtls_lib
 $(AWSIOT_DIR):
-	git clone https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(AWSIOT_DIR)
+	git clone -b v1.1.2 --depth 1 https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(AWSIOT_DIR)
 $(MBEDTLS_DIR):
 	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > linux_mqtt_mbedtls.tar
 	tar -xf linux_mqtt_mbedtls.tar mbedtls_lib
