@@ -29,7 +29,7 @@ IoT_Error_t cloudcam_subscribe_topic(char *topic, iot_message_handler handler) {
 void cloudcam_iot_subscribe(MQTTClient_t *mc) {
   cloudcam_subscribe_topic("cloudcam/thumb/request_snapshot", thumbnail_requested_handler);
 
-  jsonStruct_t upload_shadow_update;
+  static jsonStruct_t upload_shadow_update;
   static char delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
   upload_shadow_update.cb = shadow_delta_handler;
   upload_shadow_update.pData = delta_buffer;
