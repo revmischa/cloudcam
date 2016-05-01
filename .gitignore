@@ -1,5 +1,6 @@
 # binary
 /cloudcam
+/vendor
 
 # axis files
 .eap-install.cfg
@@ -9,6 +10,8 @@
 *.eap
 *.eap.old
 package.conf.orig
+Axis.vmwarevm
+Axis-ACAP
 
 # cloudcam certs
 certs/2dd9c753bf-certificate.pem.crt

@@ -9,10 +9,14 @@ INCLUDE_DIRS += -Iinclude
 CFLAGS += -Wall -g
 #CFLAGS += -Wall -g -O2  ---- -O2 breaks mbedTLS on ARM
 
+VENDOR_DIR = vendor
+
 ###### --- aws_iot SDK + mbedTLS
 # main src dirs (relative to AXIS_TOP_DIR - change to wherever your AWS SDK lives)
-AWSIOT_DIR = aws_iot_client
-MBEDTLS_DIR = mbedtls_lib
+AWSIOT_DIR = $(VENDOR_DIR)/aws_iot_client
+MBEDTLS_DIR = $(VENDOR_DIR)/mbedtls_lib
+LIBCURL_PKG = curl-7.48.0
+LIBCURL_DIR = $(VENDOR_DIR)/$(LIBCURL_PKG)
 
 ###### --- Axis ACAP app
 AXIS_DIR = axis
@@ -28,7 +32,7 @@ MBEDTLS_SRC_DIR = $(MBEDTLS_DIR)/library
 MBEDTLS_SRC_FILES += $(wildcard $(MBEDTLS_SRC_DIR)/*.c)
 TLS_INCLUDE_DIR = -I $(MBEDTLS_DIR)/include
 # aws_iot client/platform/shadow
-IOT_CLIENT_DIR=$(AWSIOT_DIR)/aws_iot_src
+IOT_CLIENT_DIR = $(AWSIOT_DIR)/aws_iot_src
 PLATFORM_DIR = $(IOT_CLIENT_DIR)/protocol/mqtt/aws_iot_embedded_client_wrapper/platform_linux/mbedtls
 PLATFORM_COMMON_DIR = $(IOT_CLIENT_DIR)/protocol/mqtt/aws_iot_embedded_client_wrapper/platform_linux/common
 SHADOW_SRC_DIR = $(IOT_CLIENT_DIR)/shadow
@@ -111,10 +115,20 @@ lib:
 	mkdir -p lib
 
 
-dep: $(AWSIOT_DIR) mbedtls_lib
-$(AWSIOT_DIR):
+### vendor depdencies
+$(VENDOR_DIR):
+	mkdir $(VENDOR_DIR)
+dep: $(AWSIOT_DIR) $(MBEDTLS_DIR) $(LIBCURL_DIR)
+$(AWSIOT_DIR): | $(VENDOR_DIR)
 	git clone -b v1.1.2 --depth 1 https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(AWSIOT_DIR)
-$(MBEDTLS_DIR):
-	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > linux_mqtt_mbedtls.tar
-	tar -xf linux_mqtt_mbedtls.tar mbedtls_lib
-	rm linux_mqtt_mbedtls.tar
+$(MBEDTLS_DIR): | $(VENDOR_DIR)
+	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > $(VENDOR_DIR)/linux_mqtt_mbedtls.tar
+	cd $(VENDOR_DIR) && tar -xf linux_mqtt_mbedtls.tar mbedtls_lib
+	rm $(VENDOR_DIR)/linux_mqtt_mbedtls.tar
+libcurl: $(LIBCURL_DIR)
+$(LIBCURL_DIR): $(VENDOR_DIR)/curl.tar.bz2 | $(VENDOR_DIR)
+	cd $(VENDOR_DIR) && tar -xjf curl.tar.bz2
+	rm $(VENDOR_DIR)/curl.tar.bz2
+$(VENDOR_DIR)/curl.tar.bz2:
+	curl https://curl.haxx.se/download/$(LIBCURL_PKG).tar.bz2 > $(VENDOR_DIR)/curl.tar.bz2
+
