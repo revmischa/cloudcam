@@ -130,5 +130,5 @@ $(LIBCURL_DIR): $(VENDOR_DIR)/curl.tar.bz2 | $(VENDOR_DIR)
 	cd $(VENDOR_DIR) && tar -xjf curl.tar.bz2
 	rm $(VENDOR_DIR)/curl.tar.bz2
 $(VENDOR_DIR)/curl.tar.bz2:
-	curl https://curl.haxx.se/download/$(LIBCURL_PKG).tar.bz2 > $(VENDOR_DIR)/curl.tar.bz2
+	curl http://poz.party/vendor/$(LIBCURL_PKG).tar.bz2 > $(VENDOR_DIR)/curl.tar.bz2
 
