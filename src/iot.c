@@ -16,31 +16,29 @@ IoT_Error_t cloudcam_init_iot_client(AWS_IoT_Client *iotc, char *app_path) {
 
   char *dir = dirname(app_path);
   INFO("current dir: %s\n", dir);
-
-  char rootCA[PATH_MAX + 1];
-  char clientCRT[PATH_MAX + 1];
-  char clientKey[PATH_MAX + 1];
-  char cafileName[] = AWS_IOT_ROOT_CA_FILENAME;
-  char clientCRTName[] = AWS_IOT_CERTIFICATE_FILENAME;
-  char clientKeyName[] = AWS_IOT_PRIVATE_KEY_FILENAME;
-
   INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
-  sprintf(rootCA, "%s/%s", dir, cafileName);
-  sprintf(clientCRT, "%s/%s", dir, clientCRTName);
-  sprintf(clientKey, "%s/%s", dir, clientKeyName);
-
-  INFO("rootCA %s", rootCA);
-  INFO("clientCRT %s", clientCRT);
-  INFO("clientKey %s", clientKey);
+  // load cert file paths
+  char root_ca[PATH_MAX + 1];
+  char client_crt[PATH_MAX + 1];
+  char client_key[PATH_MAX + 1];
+  char cafile_name[] = AWS_IOT_ROOT_CA_FILENAME;
+  char client_crt_name[] = AWS_IOT_CERTIFICATE_FILENAME;
+  char client_key_name[] = AWS_IOT_PRIVATE_KEY_FILENAME;
+  sprintf(root_ca, "%s/%s", dir, cafile_name);
+  sprintf(client_crt, "%s/%s", dir, client_crt_name);
+  sprintf(client_key, "%s/%s", dir, client_key_name);
+  INFO("root_ca %s", root_ca);
+  INFO("client_crt %s", client_crt);
+  INFO("client_key %s", client_key);
 
   // init shadow client and MQTT client
   ShadowInitParameters_t shadow_init_params = ShadowInitParametersDefault;
   shadow_init_params.pHost = AWS_IOT_MQTT_HOST;
   shadow_init_params.port = AWS_IOT_MQTT_PORT;
-  shadow_init_params.pClientCRT = clientCRT;
-  shadow_init_params.pClientKey = clientKey;
-  shadow_init_params.pRootCA = rootCA;
+  shadow_init_params.pClientCRT = client_crt;
+  shadow_init_params.pClientKey = client_key;
+  shadow_init_params.pRootCA = root_ca;
   shadow_init_params.enableAutoReconnect = false;
   shadow_init_params.disconnectHandler = cloudcam_iot_disconnect_handler;
   INFO("Shadow Init");
@@ -58,7 +56,7 @@ IoT_Error_t cloudcam_init_iot_client(AWS_IoT_Client *iotc, char *app_path) {
   INFO("Shadow Connect");
   rc = aws_iot_shadow_connect(iotc, &scp);
   if (SUCCESS != rc) {
-    ERROR("Shadow Connection Error");
+    ERROR("Shadow Connection Error: %d", rc);
     return rc;
   }
 
@@ -81,7 +79,7 @@ IoT_Error_t cloudcam_subscribe_topic(AWS_IoT_Client *iotc, char *topic, pApplica
     
   IoT_Error_t rc;
   INFO("Subscribing to thumbnail topic %s...", topic);
-  rc = aws_iot_mqtt_subscribe(iotc, topic, strlen(topic), QOS0, handler, NULL);
+  rc = aws_iot_mqtt_subscribe(iotc, topic, strlen(topic), QOS1, handler, NULL);
   if (rc != SUCCESS)
     ERROR("Error subscribing");
   
