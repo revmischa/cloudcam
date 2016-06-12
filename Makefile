@@ -27,18 +27,24 @@ LOG_FLAGS += -DIOT_INFO
 LOG_FLAGS += -DIOT_WARN
 LOG_FLAGS += -DIOT_ERROR
 
-PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux/mbedtls
-PLATFORM_COMMON_DIR = $(IOT_CLIENT_DIR)/platform/linux/common
+PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux
+PLATFORM_COMMON_DIR = $(PLATFORM_DIR)/common
+PLATFORM_TLS_DIR = $(PLATFORM_DIR)/mbedtls
+PLATFORM_THREAD_DIR = $(PLATFORM_DIR)/pthread
 
 INCLUDE_DIRS += -I $(IOT_CLIENT_DIR)/include
 INCLUDE_DIRS += -I $(IOT_CLIENT_DIR)/external_libs/jsmn
 INCLUDE_DIRS += -I $(PLATFORM_COMMON_DIR)
 INCLUDE_DIRS += -I $(PLATFORM_DIR)
+INCLUDE_DIRS += -I $(PLATFORM_TLS_DIR)
+INCLUDE_DIRS += -I $(PLATFORM_THREAD_DIR)
 
 IOT_SRC_FILES += $(wildcard $(IOT_CLIENT_DIR)/src/*.c)
 IOT_SRC_FILES += $(wildcard $(IOT_CLIENT_DIR)/external_libs/jsmn/*.c)
 IOT_SRC_FILES += $(wildcard $(PLATFORM_DIR)/*.c)
 IOT_SRC_FILES += $(wildcard $(PLATFORM_COMMON_DIR)/*.c)
+IOT_SRC_FILES += $(wildcard $(PLATFORM_TLS_DIR)/*.c)
+IOT_SRC_FILES += $(wildcard $(PLATFORM_THREAD_DIR)/*.c)
 
 # TLS - mbedtls
 # MBEDTLS_DIR = $(IOT_CLIENT_DIR)/external_libs/mbedTLS

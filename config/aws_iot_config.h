@@ -21,6 +21,8 @@
 #ifndef SRC_SHADOW_IOT_SHADOW_CONFIG_H_
 #define SRC_SHADOW_IOT_SHADOW_CONFIG_H_
 
+#define _ENABLE_THREAD_SUPPORT_ true
+
 // Get from console
 // =================================================
 #define AWS_IOT_MQTT_HOST              "A23C0YHADOLYOV.iot.us-west-2.amazonaws.com" ///< Customer specific MQTT HOST. The same will be used for Thing Shadow
@@ -52,6 +54,5 @@
 // Auto Reconnect specific config
 #define AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL 1000 ///< Minimum time before the First reconnect attempt is made as part of the exponential back-off algorithm
 #define AWS_IOT_MQTT_MAX_RECONNECT_WAIT_INTERVAL 8000 ///< Maximum time interval after which exponential back-off will stop attempting to reconnect.
-
 
 #endif /* SRC_SHADOW_IOT_SHADOW_CONFIG_H_ */
