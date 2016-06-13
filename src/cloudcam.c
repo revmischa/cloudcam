@@ -35,7 +35,15 @@ int main(int argc, char** argv) {
   cloudcam_init_logging();
 
   AWS_IoT_Client iotc;
-  cloudcam_init_iot_client(&iotc, argv[0]);
+  IoT_Error_t rc;
+
+  do {
+    rc = cloudcam_init_iot_client(&iotc, argv[0]);
+    if (rc != SUCCESS) {
+      WARN("Failed to connect, will retry...")
+      sleep(10);
+    }
+  } while (rc != SUCCESS);
   
   // subscribe to topics and shadow deltas
   cloudcam_iot_subscribe(&iotc);
