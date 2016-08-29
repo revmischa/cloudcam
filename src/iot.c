@@ -62,6 +62,7 @@ IoT_Error_t cloudcam_init_iot_client(AWS_IoT_Client *iotc, char *app_path) {
   ShadowConnectParameters_t scp = ShadowConnectParametersDefault;
   scp.pMyThingName = AWS_IOT_MY_THING_NAME;
   scp.pMqttClientId = AWS_IOT_MQTT_CLIENT_ID;
+  scp.mqttClientIdLen = (uint16_t)strlen(AWS_IOT_MQTT_CLIENT_ID);
 
   INFO("Shadow Connect");
   rc = aws_iot_shadow_connect(iotc, &scp);
