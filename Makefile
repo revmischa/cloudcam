@@ -115,9 +115,10 @@ $(VENDOR_DIR):
 	mkdir $(VENDOR_DIR)
 dep: $(IOT_CLIENT_DIR) $(MBEDTLS_DIR) $(LIBCURL_DIR)
 $(IOT_CLIENT_DIR): | $(VENDOR_DIR)
-	git clone -b v2.0.0 --depth 1 https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(IOT_CLIENT_DIR)
+	git clone -b v2.1.0 --depth 1 https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(IOT_CLIENT_DIR)
 $(MBEDTLS_DIR): | $(VENDOR_DIR) $(IOT_CLIENT_DIR)
-	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar > $(VENDOR_DIR)/linux_mqtt_mbedtls.tar
+	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar \
+		> $(VENDOR_DIR)/linux_mqtt_mbedtls.tar
 	cd $(VENDOR_DIR) && tar -xf linux_mqtt_mbedtls.tar mbedtls_lib
 	rm $(VENDOR_DIR)/linux_mqtt_mbedtls.tar
 	# cp -r $(MBEDTLS_DIR)/* 

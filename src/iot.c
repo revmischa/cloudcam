@@ -32,6 +32,16 @@ IoT_Error_t cloudcam_init_iot_client(AWS_IoT_Client *iotc, char *app_path) {
   INFO("client_crt %s", client_crt);
   INFO("client_key %s", client_key);
 
+  // let's make sure these files exist
+  if (access(client_crt, F_OK) == -1) {
+    ERROR("Missing certificate file: %s", client_crt);
+    return FAILURE;
+  }
+  if (access(client_key, F_OK) == -1) {
+    ERROR("Missing key file: %s", client_key);
+    return FAILURE;
+  }
+
   // init shadow client and MQTT client
   ShadowInitParameters_t shadow_init_params = ShadowInitParametersDefault;
   shadow_init_params.pHost = AWS_IOT_MQTT_HOST;
