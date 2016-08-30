@@ -1,6 +1,14 @@
 # binary
 /cloudcam
-/vendor
+/vendor/.built_aws_lib
+/vendor/.extracted_libcurl
+/vendor/curl-*
+/vendor/mbedtls_lib
+/vendor/.cloned_iot_client
+/vendor/.extracted_mbedtls 
+/vendor/aws_iot_client
+/vendor/libaws-iot.a        
+
 
 # axis files
 .eap-install.cfg
