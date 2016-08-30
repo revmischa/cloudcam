@@ -3,16 +3,6 @@ IOT_CLIENT_DIR = aws_iot_client
 MBEDTLS_DIR = mbedtls_lib
 LIBCURL_PKG = curl-7.48.0
 
-# log level control
-LOG_FLAGS += -DIOT_DEBUG  # enable this for debug logs
-LOG_FLAGS += -DIOT_INFO
-LOG_FLAGS += -DIOT_WARN
-LOG_FLAGS += -DIOT_ERROR
-
-PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux
-PLATFORM_COMMON_DIR = $(PLATFORM_DIR)/common
-PLATFORM_TLS_DIR = $(PLATFORM_DIR)/mbedtls
-PLATFORM_THREAD_DIR = $(PLATFORM_DIR)/pthread
 
 # iot client sources
 IOT_SRC_FILES += $(wildcard $(IOT_CLIENT_DIR)/src/*.c)
@@ -22,6 +12,11 @@ IOT_SRC_FILES += $(wildcard $(PLATFORM_COMMON_DIR)/*.c)
 IOT_SRC_FILES += $(wildcard $(PLATFORM_TLS_DIR)/*.c)
 IOT_SRC_FILES += $(wildcard $(PLATFORM_THREAD_DIR)/*.c)
 AWS_OBJS = $(IOT_SRC_FILES:.c=.o)
+
+PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux
+PLATFORM_COMMON_DIR = $(PLATFORM_DIR)/common
+PLATFORM_TLS_DIR = $(PLATFORM_DIR)/mbedtls
+PLATFORM_THREAD_DIR = $(PLATFORM_DIR)/pthread
 
 # static iot client lib
 AWS_LIB = libaws-iot.a
@@ -40,7 +35,7 @@ INCLUDE_DIRS += -I $(PLATFORM_TLS_DIR)
 INCLUDE_DIRS += -I $(PLATFORM_THREAD_DIR)
 INCLUDE_DIRS += -I ../config
 
-CFLAGS = $(INCLUDE_DIRS) $(LOG_FLAGS)
+CFLAGS = $(INCLUDE_DIRS)
 BUILD = $(CC) $(CFLAGS)
 
 BUILT_AWS_LIB = .built_aws_lib

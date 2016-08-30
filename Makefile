@@ -19,6 +19,11 @@ IOT_CLIENT_DIR = $(VENDOR_DIR)/aws_iot_client
 MBEDTLS_DIR = $(VENDOR_DIR)/mbedtls_lib
 LIBCURL_PKG = $(VENDOR_DIR)/curl-7.48.0
 
+###### --- log level control
+LOG_FLAGS += -DIOT_DEBUG  # enable this for debug logs
+LOG_FLAGS += -DIOT_INFO
+LOG_FLAGS += -DIOT_WARN
+LOG_FLAGS += -DIOT_ERROR
 
 ###### --- includes
 TLS_LIB_DIR = $(MBEDTLS_DIR)/library
@@ -40,7 +45,7 @@ LDFLAGS += $(TLS_LIB_FILES) -lpthread
 LDFLAGS += -L$(VENDOR_DIR) -laws-iot
 
 ###### --- compile flags
-CFLAGS += $(INCLUDE_DIRS)
+CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS)
 
 ###### --- build cmd
 BUILD = $(CC) $(CFLAGS) $(LDFLAGS)
