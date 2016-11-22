@@ -47,6 +47,11 @@ LDFLAGS += -L$(VENDOR_DIR) -laws-iot
 ###### --- compile flags
 CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS)
 
+###### --- header deps
+DEPS = $(SRCS:.c=.d)
+DEPDIR = makedep
+MAKEDEPEND ?= $(CC) -M -MT$(OBJDIR)/$*.o $(CFLAGS) -o $(DEPDIR)/$*.d $<
+
 ###### --- build cmd
 BUILD = $(CC) $(CFLAGS) $(LDFLAGS)
 
@@ -57,9 +62,14 @@ cloudcam: dep
 	$(BUILD) -o cloudcam $(SRCS)
 all: $(PROGS)
 
+%.o: %.c
+    @echo Compiling $<
+    @$(MAKEDEPEND)
+    @$(BUILD) -o $@ $<
+
 clean: clean-prog clean-eap clean-target clean-vendor
 clean-prog:
-	rm -f $(PROGS) *.o core
+	rm -f $(PROGS) *.o core $(DEPDIR)
 
 # Axis ACAP app project
 clean-eap:
@@ -81,3 +91,5 @@ dep:
 clean-vendor:
 	$(MAKE) -C $(VENDOR_DIR) clean
 
+
+-include $(DEPS)
