@@ -2,6 +2,10 @@
 Modern software for manipulating live video streams from IP cameras.  
 [Explanation of this project.](http://spiegelmock.com/2016/03/27/diving-into-iot-development-using-aws/)
 
+## Related projects
+* [Janus-panoptic](https://github.com/revmischa/janus-panoptic)
+* [Janus-docker](https://github.com/revmischa/docker-janus)
+
 ### How this works
 [AWS IoT basics.](http://spiegelmock.com/2016/03/27/developing-a-cloud-based-iot-service/)  
 
@@ -26,3 +30,15 @@ By using gstreamer, Janus, and WebRTC we can construct a fully open-source, stan
 
 ### Contributing
 If this sounds like an interesting project that you would like to help build, please drop us a line: [cloudcam@int80.biz](mailto:cloudcam@int80.biz).
+
+## Old projects
+This design has gone through many incarnations and revisions. Some previous attempts were:
+* [RTSP client](https://github.com/revmischa/rtsp-client)
+* [RTSP server](https://github.com/revmischa/rtsp-server)
+* [RTSP proxy](https://github.com/revmischa/rtsp-proxy)
+* [Perl libav/ffmpeg bindings](https://github.com/revmischa/av-streamer)
+* [Perl panoptic](https://github.com/revmischa/panoptic-perl)
+* [AS3 panoptic](https://github.com/revmischa/as3-panoptic)
+* [RTOS panoptic client](https://github.com/revmischa/keil-panoptic-client)
+* [WebApp rapid development framework for panoptic](https://github.com/revmischa/rapid)
+
