@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <libgen.h>
+#include <curl/curl.h>
 
 #include "cloudcam/iot.h"
 #include "cloudcam/log.h"
@@ -91,15 +92,19 @@ IoT_Error_t cloudcam_subscribe_topic(AWS_IoT_Client *iotc, char *topic, pApplica
   IoT_Error_t rc;
   INFO("Subscribing to thumbnail topic %s...", topic);
   rc = aws_iot_mqtt_subscribe(iotc, topic, strlen(topic), QOS1, handler, NULL);
-  if (rc != SUCCESS)
-    ERROR("Error subscribing");
-  
+  if (rc != SUCCESS) {
+    ERROR("Error subscribing %d", rc);
+  } else {
+    INFO("Subscribed");
+  }
   return rc;
 }
 
 // subscribe to topics we're interested in
 void cloudcam_iot_subscribe(AWS_IoT_Client *iotc) {
   cloudcam_subscribe_topic(iotc, "cloudcam/thumb/request_snapshot", thumbnail_requested_handler);
+
+  return;
 
   static jsonStruct_t upload_shadow_update;
   static char delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
@@ -143,7 +148,9 @@ void cloudcam_iot_poll_loop(AWS_IoT_Client *iotc) {
 // callback when server requests a new thumbnail
 void thumbnail_requested_handler(AWS_IoT_Client *iotc, char *topic_name, unsigned short topic_name_len,
              IoT_Publish_Message_Params *params, void *data) {
-  printf("thumb requested handler\n");
+  char *msg = strndup(params->payload, params->payloadLen);
+  printf("thumb requested handler. message:\n%s\n", msg);
+  free(msg);
 }
 
 void shadow_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {

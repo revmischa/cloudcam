@@ -27,6 +27,7 @@ LOG_FLAGS += -DIOT_ERROR
 
 ###### --- includes
 TLS_LIB_DIR = $(MBEDTLS_DIR)/library
+CURL_LIB_DIR = $(LIBCURL_PKG)/lib
 PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux
 PLATFORM_COMMON_DIR = $(PLATFORM_DIR)/common
 PLATFORM_TLS_DIR = $(PLATFORM_DIR)/mbedtls
@@ -38,11 +39,13 @@ INCLUDE_DIRS += -I $(PLATFORM_DIR)
 INCLUDE_DIRS += -I $(PLATFORM_TLS_DIR)
 INCLUDE_DIRS += -I $(PLATFORM_THREAD_DIR)
 INCLUDE_DIRS += -I $(MBEDTLS_DIR)/include
+INCLUDE_DIRS += -I $(LIBCURL_PKG)/include
 
 ###### --- link flags
 TLS_LIB_FILES = $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a
 LDFLAGS += $(TLS_LIB_FILES) -lpthread
 LDFLAGS += -L$(VENDOR_DIR) -laws-iot
+LDFLAGS += -L$(CURL_LIB_DIR) -lcurl
 
 ###### --- compile flags
 CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS)
@@ -63,9 +66,9 @@ cloudcam: dep
 all: $(PROGS)
 
 %.o: %.c
-    @echo Compiling $<
-    @$(MAKEDEPEND)
-    @$(BUILD) -o $@ $<
+	@echo Compiling $<
+	@$(MAKEDEPEND)
+	@$(BUILD) -o $@ $<
 
 clean: clean-prog clean-eap clean-target clean-vendor
 clean-prog:

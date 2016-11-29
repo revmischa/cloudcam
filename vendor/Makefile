@@ -39,16 +39,25 @@ CFLAGS = $(INCLUDE_DIRS)
 BUILD = $(CC) $(CFLAGS)
 
 BUILT_AWS_LIB = .built_aws_lib
+BUILT_LIBCURL = .built_libcurl
+LIBCURL_DIR = $(LIBCURL_PKG)
 
 prep: prep-deps
-build: prep $(BUILT_AWS_LIB)
+build: $(BUILT_AWS_LIB) $(BUILT_LIBCURL) | prep
 
 # building libs
+# make mbedtls
 $(TLS_LIB_FILES): $(MBEDTLS_DIR)
 	$(MAKE) -j6 -C $(MBEDTLS_DIR)
+# make aws lib
 $(BUILT_AWS_LIB): $(AWS_OBJS) | $(TLS_LIB_FILES)
 	ar rcs $(AWS_LIB) $(AWS_OBJS)
 	touch $(BUILT_AWS_LIB)
+# make libcurl
+$(BUILT_LIBCURL): $(TLS_LIB_FILES) 
+	cd $(LIBCURL_DIR) && ./configure --with-mbedtls
+	make -C $(LIBCURL_DIR) -j3
+	touch $(BUILT_LIBCURL)
 
 %.o: %.c
 	@echo Compiling $<
@@ -61,9 +70,8 @@ LIBCURL_EXTRACTED = .extracted_libcurl
 prep-deps: $(IOT_CLIENT_CLONED) $(MBEDTLS_EXTRACTED) $(LIBCURL_EXTRACTED)	
 
 # dep fetching/extraction
-LIBCURL_DIR = $(LIBCURL_PKG)
 $(IOT_CLIENT_CLONED):
-	git clone -b v2.1.0 --depth 1 https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(IOT_CLIENT_DIR)
+	git clone -b v2.1.1 --depth 1 https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(IOT_CLIENT_DIR)
 	touch $(IOT_CLIENT_CLONED)
 $(MBEDTLS_EXTRACTED): | $(IOT_CLIENT_CLONED)
 	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar \
