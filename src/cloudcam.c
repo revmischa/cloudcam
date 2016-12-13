@@ -1,13 +1,3 @@
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/stat.h>
-#include <limits.h>
-#include <fcntl.h>
 
 // override logging with axis syslog logz
 #include "cloudcam/log.h"
@@ -15,7 +5,8 @@
 #include "cloudcam/iot.h"
 
 static void test_pub_thumb(AWS_IoT_Client *iotc);
-static void cloudcam_cleanup(AWS_IoT_Client *iotc);
+static int cloudcam_global_init();
+static void cloudcam_global_cleanup();
 static void cloudcam_init_logging();
 
 int MQTTcallbackHandler(AWS_IoT_Client *iotc, char *topic_name, uint16_t topic_name_len, IoT_Publish_Message_Params *params, void *data) {
@@ -32,27 +23,83 @@ void cloudcam_iot_disconnect_handler(AWS_IoT_Client *iotc, void *data) {
 }
 
 int main(int argc, char** argv) {
-  cloudcam_init_logging();
+  cloudcam_ctx ctx;
+  if (cloudcam_init_ctx(&ctx, argv[0]) != SUCCESS) {
+    ERROR("Failed initializing CloudCam client context");
+    return 1;
+  }
 
-  AWS_IoT_Client iotc;
+  if (cloudcam_global_init() != SUCCESS) {
+    ERROR("Failed to initialize all required components");
+    return 1;
+  }
+
+  if (cloudcam_connect_blocking(&ctx) != SUCCESS) {
+    ERROR("Failed to connect to AWSIoT service");
+    return 2;
+  }
+  test_pub_thumb(ctx.iotc);
+
+  while (1) {
+    cloudcam_iot_poll_loop(&ctx);
+  }
+
+  cloudcam_global_cleanup();
+  return 0;
+}
+
+// initialize a newly-allocated cloudcam context
+// app_dir_path: root of application home dir, includes config dir
+int cloudcam_init_ctx(cloudcam_ctx *ctx, char *app_dir_path) {
+  bzero(ctx, sizeof(cloudcam_ctx));  // set to all 0s
+
+  // copy app path
+  ctx->app_dir_path = strdup(app_dir_path);
+
+  // alloc IoT client
+  AWS_IoT_Client *iotc = malloc(sizeof(AWS_IoT_Client));
+  ctx->iotc = iotc;
+
+  return SUCCESS;
+}
+
+// block until client is connected
+IoT_Error_t cloudcam_connect_blocking(cloudcam_ctx *ctx) {
+  assert(ctx->iotc);
+  assert(ctx->app_dir_path);
+
+  // attempt connect
   IoT_Error_t rc;
-
   do {
-    rc = cloudcam_init_iot_client(&iotc, argv[0]);
+    rc = cloudcam_init_iot_client(ctx);
     if (rc != SUCCESS) {
       WARN("Failed to connect, will retry...")
       sleep(10);
     }
   } while (rc != SUCCESS);
-  
+
+  // should now be connected!
+
   // subscribe to topics and shadow deltas
-  cloudcam_iot_subscribe(&iotc);
+  rc = cloudcam_iot_subscribe(ctx->iotc);
+  if (rc != SUCCESS) {
+    WARN("Failed to subscribe to topic");
+    return rc;
+  }
 
-  test_pub_thumb(&iotc);
-  cloudcam_iot_poll_loop(&iotc);
+  return SUCCESS;
+}
 
-  cloudcam_cleanup(&iotc);
-  return 0;
+int cloudcam_free_ctx(cloudcam_ctx *ctx) {
+  if (ctx->app_dir_path)
+    free(ctx->app_dir_path);
+
+  if (ctx->iotc) {
+    // more cleanup goes here
+    free(ctx->iotc);
+  }
+
+  return SUCCESS;
 }
 
 void cloudcam_init_logging() {
@@ -62,7 +109,18 @@ void cloudcam_init_logging() {
   tolog(&stderr);
 }
 
-void cloudcam_cleanup(AWS_IoT_Client *iotc) {
+// main application setup
+int cloudcam_global_init() {
+  cloudcam_init_logging();
+  CURLcode curl_ret = curl_global_init(CURL_GLOBAL_SSL);
+  if (curl_ret) {
+    ERROR("Failed to initialize libcurl %d", curl_ret);
+    return curl_ret;
+  }
+  return SUCCESS;
+}
+
+void cloudcam_global_cleanup() {
   closelog();
 }
 

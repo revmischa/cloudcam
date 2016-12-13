@@ -1,6 +1,13 @@
 #ifndef CLOUDCAM_IOT_H
 #define CLOUDCAM_IOT_H
 
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+#include <libgen.h>
+
+#include "cloudcam.h"
 #include "aws_iot_version.h"
 #include "aws_iot_mqtt_client_interface.h"
 #include "aws_iot_config.h"
@@ -12,9 +19,9 @@ void shadow_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruc
 void thumbnail_requested_handler(AWS_IoT_Client *iotc, char *topic_name, unsigned short topic_name_len, IoT_Publish_Message_Params *params, void *data);
 void cloudcam_iot_disconnect_handler(AWS_IoT_Client *, void *);
 
-IoT_Error_t cloudcam_init_iot_client(AWS_IoT_Client *iotc, char *app_path);
-void cloudcam_iot_poll_loop(AWS_IoT_Client *iotc);
-void cloudcam_iot_subscribe(AWS_IoT_Client *iotc);
+IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx);
+void cloudcam_iot_poll_loop(cloudcam_ctx *ctx);
+IoT_Error_t cloudcam_iot_subscribe(AWS_IoT_Client *iotc);
 IoT_Error_t cloudcam_subscribe_topic(AWS_IoT_Client *iotc, char *topic, pApplicationHandler_t handler);
 
 //  int MQTTcallbackHandler(MQTTCallbackParams params);

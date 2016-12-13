@@ -1,21 +1,15 @@
 // Routines for interfacing with AWS IoT
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <assert.h>
-#include <libgen.h>
-#include <curl/curl.h>
-
 #include "cloudcam/iot.h"
 #include "cloudcam/log.h"
 
 const char *CLOUDCAM_TOPIC_THUMBNAIL_TEST = "cloudcam/thumb/store";
 
-IoT_Error_t cloudcam_init_iot_client(AWS_IoT_Client *iotc, char *app_path) {
+IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   IoT_Error_t rc = SUCCESS;
+  AWS_IoT_Client *iotc = ctx->iotc;
 
-  char *dir = dirname(app_path);
+  char *dir = dirname(ctx->app_dir_path);
   INFO("current dir: %s\n", dir);
   INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
@@ -101,33 +95,33 @@ IoT_Error_t cloudcam_subscribe_topic(AWS_IoT_Client *iotc, char *topic, pApplica
 }
 
 // subscribe to topics we're interested in
-void cloudcam_iot_subscribe(AWS_IoT_Client *iotc) {
-  cloudcam_subscribe_topic(iotc, "cloudcam/thumb/request_snapshot", thumbnail_requested_handler);
+IoT_Error_t cloudcam_iot_subscribe(AWS_IoT_Client *iotc) {
+  return cloudcam_subscribe_topic(iotc, "cloudcam/thumb/request_snapshot", thumbnail_requested_handler);
 
-  return;
+  // return;
 
-  static jsonStruct_t upload_shadow_update;
-  static char delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
-  upload_shadow_update.cb = shadow_delta_handler;
-  upload_shadow_update.pData = delta_buffer;
-  upload_shadow_update.pKey = "upload_endpoint";
-  upload_shadow_update.type = SHADOW_JSON_OBJECT;
-  IoT_Error_t rc = aws_iot_shadow_register_delta(iotc, &upload_shadow_update);
-  if (SUCCESS != rc) {
-    ERROR("Shadow Register Delta Error");
-  } else {
-    INFO("Registered for shadow delta updates");
-  }
+  // static jsonStruct_t upload_shadow_update;
+  // static char delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
+  // upload_shadow_update.cb = shadow_delta_handler;
+  // upload_shadow_update.pData = delta_buffer;
+  // upload_shadow_update.pKey = "upload_endpoint";
+  // upload_shadow_update.type = SHADOW_JSON_OBJECT;
+  // IoT_Error_t rc = aws_iot_shadow_register_delta(iotc, &upload_shadow_update);
+  // if (SUCCESS != rc) {
+  //   ERROR("Shadow Register Delta Error");
+  // } else {
+  //   INFO("Registered for shadow delta updates");
+  // }
 
-  sleep(1);
+  // return rc;
 }
 
 // sit and wait for messages
-void cloudcam_iot_poll_loop(AWS_IoT_Client *iotc) {
+void cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
   IoT_Error_t rc = SUCCESS;
 
   while (rc == SUCCESS || rc == NETWORK_ATTEMPTING_RECONNECT || rc == NETWORK_RECONNECTED) {
-    rc = aws_iot_shadow_yield(iotc, 200);
+    rc = aws_iot_shadow_yield(ctx->iotc, 200);
     if (rc == NETWORK_ATTEMPTING_RECONNECT) {
       sleep(1);
       continue;
@@ -139,7 +133,7 @@ void cloudcam_iot_poll_loop(AWS_IoT_Client *iotc) {
 
     sleep(1);
   }
-  INFO("rc=%d\n", rc);
+  INFO("Finished poll loop rc=%d\n", rc);
 }
       
 //////
