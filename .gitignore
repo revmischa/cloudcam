@@ -1,6 +1,6 @@
 # binary
 /cloudcam
-/vendor/.built_aws_lib
+/vendor/.built_*
 /vendor/.extracted_libcurl
 /vendor/curl-*
 /vendor/mbedtls_lib

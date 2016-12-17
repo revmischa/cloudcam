@@ -23,17 +23,16 @@ void cloudcam_iot_disconnect_handler(AWS_IoT_Client *iotc, void *data) {
 }
 
 int main(int argc, char** argv) {
+  // init test context
   cloudcam_ctx ctx;
   if (cloudcam_init_ctx(&ctx, argv[0]) != SUCCESS) {
     ERROR("Failed initializing CloudCam client context");
     return 1;
   }
-
   if (cloudcam_global_init() != SUCCESS) {
     ERROR("Failed to initialize all required components");
     return 1;
   }
-
   if (cloudcam_connect_blocking(&ctx) != SUCCESS) {
     ERROR("Failed to connect to AWSIoT service");
     return 2;
@@ -41,9 +40,12 @@ int main(int argc, char** argv) {
   test_pub_thumb(ctx.iotc);
 
   while (1) {
+    // mainloop
     cloudcam_iot_poll_loop(&ctx);
   }
 
+  // cleanup
+  cloudcam_free_ctx(&ctx);
   cloudcam_global_cleanup();
   return 0;
 }
@@ -98,6 +100,8 @@ int cloudcam_free_ctx(cloudcam_ctx *ctx) {
     // more cleanup goes here
     free(ctx->iotc);
   }
+
+  bzero(ctx, sizeof(cloudcam_ctx));
 
   return SUCCESS;
 }
