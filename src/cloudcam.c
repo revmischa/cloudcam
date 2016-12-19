@@ -62,6 +62,11 @@ int cloudcam_init_ctx(cloudcam_ctx *ctx, char *app_dir_path) {
   AWS_IoT_Client *iotc = malloc(sizeof(AWS_IoT_Client));
   ctx->iotc = iotc;
 
+  // alloc JSON parser
+  jsmn_parser *parser = malloc(sizeof(jsmn_parser));
+  jsmn_init(parser);
+  ctx->json_parser = parser;
+
   return SUCCESS;
 }
 
@@ -83,7 +88,7 @@ IoT_Error_t cloudcam_connect_blocking(cloudcam_ctx *ctx) {
   // should now be connected!
 
   // subscribe to topics and shadow deltas
-  rc = cloudcam_iot_subscribe(ctx->iotc);
+  rc = cloudcam_iot_subscribe(ctx);
   if (rc != SUCCESS) {
     WARN("Failed to subscribe to topic");
     return rc;
@@ -100,6 +105,9 @@ int cloudcam_free_ctx(cloudcam_ctx *ctx) {
     // more cleanup goes here
     free(ctx->iotc);
   }
+
+  if (ctx->app_dir_path)
+    free(ctx->json_parser);
 
   bzero(ctx, sizeof(cloudcam_ctx));
 

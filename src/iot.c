@@ -80,12 +80,12 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   return SUCCESS;
 }
 
-IoT_Error_t cloudcam_subscribe_topic(AWS_IoT_Client *iotc, char *topic, pApplicationHandler_t handler) {
+IoT_Error_t cloudcam_subscribe_topic(cloudcam_ctx *ctx, char *topic, pApplicationHandler_t handler) {
   assert(topic);
     
   IoT_Error_t rc;
   INFO("Subscribing to thumbnail topic %s...", topic);
-  rc = aws_iot_mqtt_subscribe(iotc, topic, strlen(topic), QOS1, handler, NULL);
+  rc = aws_iot_mqtt_subscribe(ctx->iotc, topic, strlen(topic), QOS1, handler, ctx);
   if (rc != SUCCESS) {
     ERROR("Error subscribing %d", rc);
   } else {
@@ -95,8 +95,8 @@ IoT_Error_t cloudcam_subscribe_topic(AWS_IoT_Client *iotc, char *topic, pApplica
 }
 
 // subscribe to topics we're interested in
-IoT_Error_t cloudcam_iot_subscribe(AWS_IoT_Client *iotc) {
-  return cloudcam_subscribe_topic(iotc, "cloudcam/thumb/request_snapshot", thumbnail_requested_handler);
+IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx) {
+  return cloudcam_subscribe_topic(ctx, "cloudcam/thumb/request_snapshot", thumbnail_requested_handler);
 
   // return;
 
@@ -141,12 +141,25 @@ void cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
 
 // callback when server requests a new thumbnail
 void thumbnail_requested_handler(AWS_IoT_Client *iotc, char *topic_name, unsigned short topic_name_len,
-             IoT_Publish_Message_Params *params, void *data) {
-  char *msg = strndup(params->payload, params->payloadLen);
-  printf("thumb requested handler. message:\n%s\n", msg);
-  free(msg);
+             IoT_Publish_Message_Params *params, void *user_data) {
+  cloudcam_ctx *ctx = (cloudcam_ctx *)user_data;
+  assert(ctx->iotc == iotc);
+  char *payload = strndup(params->payload, params->payloadLen);
+  printf("thumb requested handler. payload:\n%s\n", payload);
+
+  // parse payload JSON string
+  jsmntok_t tokens[256];
+  int r;
+  r = jsmn_parse(ctx->json_parser, payload, strlen(payload), tokens, 256);
+
+  // upload dummy file (for testing for now)
+  // test_pub_thumb(ctx, )
+  // cloudcam_upload_file_to_s3_presigned(ctx,);
+
+  free(payload);
 }
 
+// called when device shadow changes with info about what changed
 void shadow_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {
   INFO("delta handler");
   if (json_str && js) {
