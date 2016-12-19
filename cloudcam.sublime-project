@@ -1,0 +1,34 @@
+{
+	"folders":
+	[
+		{
+			"path": "."
+		}
+	],
+
+	"SublimeLinter":
+{
+    "linters":
+    {
+        "clang": {
+            "ignore_match": [
+                "No copyright message",
+                "Include the directory when naming \\.h"
+            ],
+
+            "extra_flags": "-Wall -I${project_folder}/src",
+            "include_dirs": [
+                "${project_folder}/config",
+                "${project_folder}/include",
+                "${project_folder}/vendor/mbedtls_lib/include",
+                "${project_folder}/vendor/curl-7.48.0/include",
+                "${project_folder}/vendor/aws_iot_client/platform/linux/common/",
+                "${project_folder}/vendor/aws_iot_client/platform/linux/pthread",
+                "${project_folder}/vendor/aws_iot_client/platform/linux/mbedtls",
+                "${project_folder}/vendor/aws_iot_client/include"
+           ]
+        }
+    }
+}
+
+}
