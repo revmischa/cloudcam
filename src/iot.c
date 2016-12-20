@@ -128,6 +128,7 @@ void cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
     }
     if (rc != SUCCESS) {
       ERROR("Shadow yield error. Likely unexpected TCP socket disconnect. Error: %d", rc);
+      sleep(2);
       break;
     }
 
@@ -151,11 +152,26 @@ void thumbnail_requested_handler(AWS_IoT_Client *iotc, char *topic_name, unsigne
   jsmntok_t tokens[256];
   int r;
   r = jsmn_parse(ctx->json_parser, payload, strlen(payload), tokens, 256);
+  if (r < 0) {
+    // error parsing JSON
+    ERROR("Failed to parse JSON message: %d [payload=%s]", r, payload);
+    goto CLEANUP;
+  } else {
+    // success, should be able to grab URL+params from tokens now
+    // check root object
+    if (tokens[0].type != JSMN_OBJECT) {
+      // not good!
+      ERROR("Expected JSMN_OBJECT as root of thumbnail request response");
+      goto CLEANUP;
+    }
+    // root should contain upload_endpoint
 
+  }
   // upload dummy file (for testing for now)
   // test_pub_thumb(ctx, )
   // cloudcam_upload_file_to_s3_presigned(ctx,);
 
+  CLEANUP:
   free(payload);
 }
 
