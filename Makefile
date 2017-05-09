@@ -48,7 +48,8 @@ TLS_LIB_FILES = $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS
 LDFLAGS += $(TLS_LIB_FILES) -lpthread
 LDFLAGS += -L$(VENDOR_DIR) -laws-iot
 LDFLAGS += -L$(CURL_LIB_DIR) -lcurl
-LDFLAGS += -L$(JANSSON_DIR)/build/lib -ljansson
+# LDFLAGS += -L$(JANSSON_DIR)/build/lib -ljansson
+LDFLAGS += vendor/jansson-2.9/build/lib/libjansson.a
 
 ###### --- compile flags
 CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS)

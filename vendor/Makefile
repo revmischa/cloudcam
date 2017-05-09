@@ -3,7 +3,7 @@ JANSSON_VERSION = 2.9
 # our dep dirs
 IOT_CLIENT_DIR = aws_iot_client
 MBEDTLS_DIR = mbedtls_lib
-LIBCURL_PKG = curl-7.48.0
+LIBCURL_PKG = curl-7.54.0
 JANSSON_DIR = jansson-$(JANSSON_VERSION)
 
 
@@ -93,7 +93,8 @@ $(MBEDTLS_EXTRACTED): | $(IOT_CLIENT_CLONED)
 	rm linux_mqtt_mbedtls.tar
 	touch $(MBEDTLS_EXTRACTED)
 $(LIBCURL_EXTRACTED):
-	curl http://poz.party/vendor/$(LIBCURL_PKG).tar.bz2 > curl.tar.bz2
+	# curl http://poz.party/vendor/$(LIBCURL_PKG).tar.bz2 > curl.tar.bz2
+	curl https://curl.haxx.se/download/$(LIBCURL_PKG).tar.bz2 > curl.tar.bz2
 	tar -xjf curl.tar.bz2
 	rm curl.tar.bz2
 	touch $(LIBCURL_EXTRACTED)
