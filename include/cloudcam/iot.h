@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <libgen.h>
-#include <jsmn/jsmn.h>
+#include <jansson.h>
 
 #include "cloudcam.h"
 #include "aws_iot_version.h"

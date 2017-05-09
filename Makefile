@@ -18,6 +18,7 @@ AXIS_DIR = axis
 IOT_CLIENT_DIR = $(VENDOR_DIR)/aws_iot_client
 MBEDTLS_DIR = $(VENDOR_DIR)/mbedtls_lib
 LIBCURL_PKG = $(VENDOR_DIR)/curl-7.48.0
+JANSSON_DIR = $(VENDOR_DIR)/jansson-2.9
 
 ###### --- log level control
 LOG_FLAGS += -DIOT_DEBUG  # enable this for debug logs
@@ -40,12 +41,14 @@ INCLUDE_DIRS += -I $(PLATFORM_TLS_DIR)
 INCLUDE_DIRS += -I $(PLATFORM_THREAD_DIR)
 INCLUDE_DIRS += -I $(MBEDTLS_DIR)/include
 INCLUDE_DIRS += -I $(LIBCURL_PKG)/include
+INCLUDE_DIRS += -I $(JANSSON_DIR)/build/include
 
 ###### --- link flags
 TLS_LIB_FILES = $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a
 LDFLAGS += $(TLS_LIB_FILES) -lpthread
 LDFLAGS += -L$(VENDOR_DIR) -laws-iot
 LDFLAGS += -L$(CURL_LIB_DIR) -lcurl
+LDFLAGS += -L$(JANSSON_DIR)/build/lib -ljansson
 
 ###### --- compile flags
 CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS)

@@ -1,7 +1,10 @@
+JANSSON_VERSION = 2.9
+
 # our dep dirs
 IOT_CLIENT_DIR = aws_iot_client
 MBEDTLS_DIR = mbedtls_lib
 LIBCURL_PKG = curl-7.48.0
+JANSSON_DIR = jansson-$(JANSSON_VERSION)
 
 
 # iot client sources
@@ -40,10 +43,17 @@ BUILD = $(CC) $(CFLAGS)
 
 BUILT_AWS_LIB = .built_aws_lib
 BUILT_LIBCURL = .built_libcurl
+BUILT_JANSSON = .built_jansson
 LIBCURL_DIR = $(LIBCURL_PKG)
 
+build: $(BUILT_AWS_LIB) $(BUILT_LIBCURL) $(BUILT_JANSSON) | prep
 prep: prep-deps
-build: $(BUILT_AWS_LIB) $(BUILT_LIBCURL) | prep
+
+# track dep fetching
+MBEDTLS_EXTRACTED = .extracted_mbedtls
+LIBCURL_EXTRACTED = .extracted_libcurl
+JANSSON_EXTRACTED = .extracted_jansson$(JANSSON_VERSION)
+prep-deps: $(IOT_CLIENT_DIR) $(MBEDTLS_EXTRACTED) $(LIBCURL_EXTRACTED) $(JANSSON_EXTRACTED)
 
 # building libs
 # make mbedtls
@@ -58,21 +68,24 @@ $(BUILT_LIBCURL): $(TLS_LIB_FILES)
 	cd $(LIBCURL_DIR) && ./configure --with-mbedtls
 	make -C $(LIBCURL_DIR) -j3
 	touch $(BUILT_LIBCURL)
+$(BUILT_JANSSON): $(JANSSON_EXTRACTED)
+	cd $(JANSSON_DIR) && ./configure --prefix=$(PWD)/$(JANSSON_DIR)/build
+	make -C $(JANSSON_DIR) -j3
+	make -C $(JANSSON_DIR) install
+	touch $(BUILT_JANSSON)
 
 %.o: %.c
 	@echo Compiling $<
 	$(BUILD) -c -o $@ $<
 
-# track dep fetching
-IOT_CLIENT_CLONED = .cloned_iot_client
-MBEDTLS_EXTRACTED = .extracted_mbedtls
-LIBCURL_EXTRACTED = .extracted_libcurl
-prep-deps: $(IOT_CLIENT_CLONED) $(MBEDTLS_EXTRACTED) $(LIBCURL_EXTRACTED)	
-
 # dep fetching/extraction
-$(IOT_CLIENT_CLONED):
+$(IOT_CLIENT_DIR):
 	git clone -b v2.1.1 --depth 1 https://github.com/aws/aws-iot-device-sdk-embedded-C.git $(IOT_CLIENT_DIR)
-	touch $(IOT_CLIENT_CLONED)
+$(JANSSON_EXTRACTED):
+	curl -L http://www.digip.org/jansson/releases/jansson-2.9.tar.gz > jansson.tar.gz
+	tar -xzf jansson.tar.gz
+	rm jansson.tar.gz
+	touch $(JANSSON_EXTRACTED)
 $(MBEDTLS_EXTRACTED): | $(IOT_CLIENT_CLONED)
 	curl https://s3.amazonaws.com/aws-iot-device-sdk-embedded-c/linux_mqtt_mbedtls-1.1.0.tar \
 		> linux_mqtt_mbedtls.tar

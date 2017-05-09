@@ -145,34 +145,32 @@ void thumbnail_requested_handler(AWS_IoT_Client *iotc, char *topic_name, unsigne
              IoT_Publish_Message_Params *params, void *user_data) {
   cloudcam_ctx *ctx = (cloudcam_ctx *)user_data;
   assert(ctx->iotc == iotc);
-  char *payload = strndup(params->payload, params->payloadLen);
-  printf("thumb requested handler. payload:\n%s\n", payload);
+  // char *payload = strndup(params->payload, params->payloadLen);
+  printf("thumb requested handler. payload:\n%s\n", params->payload);
 
   // parse payload JSON string
-  jsmntok_t tokens[256];
-  int r;
-  r = jsmn_parse(ctx->json_parser, payload, strlen(payload), tokens, 256);
-  if (r < 0) {
-    // error parsing JSON
-    ERROR("Failed to parse JSON message: %d [payload=%s]", r, payload);
-    goto CLEANUP;
-  } else {
-    // success, should be able to grab URL+params from tokens now
-    // check root object
-    if (tokens[0].type != JSMN_OBJECT) {
-      // not good!
-      ERROR("Expected JSMN_OBJECT as root of thumbnail request response");
-      goto CLEANUP;
-    }
-    // root should contain upload_endpoint
+  json_error_t error;
+  json_auto_t *root = json_loadb(params->payload, params->payloadLen, 0, &error);
 
+  if (! root) {
+      ERROR("error: on line %d: %s\n", error.line, error.text);
+      return;
   }
+
+  if (! json_is_object(root)) {
+      ERROR("error: root is not an object\n");
+      return;
+  }
+
+  printf("got endpoint\n");
+  json_auto_t *endpoint = json_object_get(root, "upload_endpoint");
+  // check...
+  json_auto_t *url = json_object_get(endpoint, "url");
+  printf("got url %s\n", json_string_value(url));
+
   // upload dummy file (for testing for now)
   // test_pub_thumb(ctx, )
   // cloudcam_upload_file_to_s3_presigned(ctx,);
-
-  CLEANUP:
-  free(payload);
 }
 
 // called when device shadow changes with info about what changed
