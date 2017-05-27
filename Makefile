@@ -17,7 +17,7 @@ AXIS_DIR = axis
 ###### --- deps
 IOT_CLIENT_DIR = $(VENDOR_DIR)/aws_iot_client
 MBEDTLS_DIR = $(VENDOR_DIR)/mbedtls_lib
-LIBCURL_PKG = $(VENDOR_DIR)/curl-7.48.0
+LIBCURL_PKG = $(VENDOR_DIR)/curl-7.54.0
 JANSSON_DIR = $(VENDOR_DIR)/jansson-2.9
 
 ###### --- log level control
@@ -28,7 +28,8 @@ LOG_FLAGS += -DIOT_ERROR
 
 ###### --- includes
 TLS_LIB_DIR = $(MBEDTLS_DIR)/library
-CURL_LIB_DIR = $(LIBCURL_PKG)/lib
+CURL_LIB_DIR = $(LIBCURL_PKG)/build/lib
+JANSSON_LIB_DIR = $(JANSSON_DIR)/build/lib
 PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux
 PLATFORM_COMMON_DIR = $(PLATFORM_DIR)/common
 PLATFORM_TLS_DIR = $(PLATFORM_DIR)/mbedtls
@@ -44,12 +45,11 @@ INCLUDE_DIRS += -I $(LIBCURL_PKG)/include
 INCLUDE_DIRS += -I $(JANSSON_DIR)/build/include
 
 ###### --- link flags
-TLS_LIB_FILES = $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a
-LDFLAGS += $(TLS_LIB_FILES) -lpthread
+TLS_LIB_FILES = -L$(TLS_LIB_DIR) -l:libmbedtls.a -l:libmbedcrypto.a -l:libmbedx509.a
+LDFLAGS += -L$(CURL_LIB_DIR) -l:libcurl.a
+LDFLAGS += -L$(JANSSON_LIB_DIR) -l:libjansson.a
 LDFLAGS += -L$(VENDOR_DIR) -laws-iot
-LDFLAGS += -L$(CURL_LIB_DIR) -lcurl
-# LDFLAGS += -L$(JANSSON_DIR)/build/lib -ljansson
-LDFLAGS += vendor/jansson-2.9/build/lib/libjansson.a
+LDFLAGS += $(TLS_LIB_FILES) -lpthread
 
 ###### --- compile flags
 CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS)
@@ -60,19 +60,19 @@ DEPDIR = makedep
 MAKEDEPEND ?= $(CC) -M -MT$(OBJDIR)/$*.o $(CFLAGS) -o $(DEPDIR)/$*.d $<
 
 ###### --- build cmd
-BUILD = $(CC) $(CFLAGS) $(LDFLAGS)
+BUILD = $(CC) $(CFLAGS)
 
 ###### --- targets
 .PHONY:	all clean dist debug host
 
 cloudcam: dep
-	$(BUILD) -o cloudcam $(SRCS)
+	$(BUILD) -o cloudcam $(SRCS) $(LDFLAGS)
 all: $(PROGS)
 
 %.o: %.c
 	@echo Compiling $<
 	@$(MAKEDEPEND)
-	@$(BUILD) -o $@ $<
+	@$(BUILD) -o $@ $< $(LDFLAGS)
 
 clean: clean-prog clean-eap clean-target clean-vendor
 clean-prog:

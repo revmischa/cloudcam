@@ -65,11 +65,12 @@ $(BUILT_AWS_LIB): $(AWS_OBJS) | $(TLS_LIB_FILES)
 	touch $(BUILT_AWS_LIB)
 # make libcurl
 $(BUILT_LIBCURL): $(TLS_LIB_FILES) 
-	cd $(LIBCURL_DIR) && ./configure --with-mbedtls
+	cd $(LIBCURL_DIR) && ./configure --with-mbedtls --prefix=$(PWD)/vendor/$(LIBCURL_DIR)/build
 	make -C $(LIBCURL_DIR) -j3
+	make -C $(LIBCURL_DIR) install
 	touch $(BUILT_LIBCURL)
 $(BUILT_JANSSON): $(JANSSON_EXTRACTED)
-	cd $(JANSSON_DIR) && ./configure --prefix=$(PWD)/$(JANSSON_DIR)/build
+	cd $(JANSSON_DIR) && ./configure --prefix=$(PWD)/vendor/$(JANSSON_DIR)/build
 	make -C $(JANSSON_DIR) -j3
 	make -C $(JANSSON_DIR) install
 	touch $(BUILT_JANSSON)
