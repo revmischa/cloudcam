@@ -1,0 +1,307 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "iotCertRegistrationRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "root",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "arn:aws:logs:*:*:*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "iot:UpdateCertificate",
+                    "iot:CreatePolicy",
+                    "iot:AttachPrincipalPolicy"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "iotCertRegistrationTopicRule": {
+      "Type": "AWS::IoT::TopicRule",
+      "Properties": {
+        "TopicRulePayload": {
+          "Sql": {
+            "Fn::Join": [
+              "",
+              [
+                "SELECT * FROM '$aws/events/certificates/registered/",
+                {
+                  "Ref": "iotCaCertId"
+                },
+                "'"
+              ]
+            ]
+          },
+          "Actions": [
+            {
+              "Lambda": {
+                "FunctionArn": {
+                  "Fn::GetAtt": [
+                    "iotCertRegistrationLambda",
+                    "Arn"
+                  ]
+                }
+              }
+            }
+          ],
+          "RuleDisabled": false
+        }
+      }
+    },
+    "iotCertRegistrationLambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Role": {
+          "Fn::GetAtt": [
+            "iotCertRegistrationRole",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs4.3",
+        "Handler": "iot_register_cert.handler",
+        "Code": "../lambda/iot_register_cert"
+      }
+    },
+    "thumbStoreTopicRule": {
+      "Type": "AWS::IoT::TopicRule",
+      "Properties": {
+        "TopicRulePayload": {
+          "Sql": "SELECT * FROM 'cloudcam/thumb/store'",
+          "Actions": [
+            {
+              "Lambda": {
+                "FunctionArn": {
+                  "Fn::GetAtt": [
+                    "thumbStoreLambda",
+                    "Arn"
+                  ]
+                }
+              }
+            }
+          ],
+          "RuleDisabled": false
+        }
+      }
+    },
+    "thumbStoreLambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Role": {
+          "Fn::GetAtt": [
+            "thumbStoreRole",
+            "Arn"
+          ]
+        },
+        "Runtime": "python3.6",
+        "Handler": "cloudcam_handler.save_thumb",
+        "Code": "../lambda/cloudcam_handler"
+      }
+    },
+    "thumbStoreLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "thumbStoreLambda"
+        },
+        "Principal": "iot.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:iot:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":rule/",
+              {
+                "Ref": "thumbStoreTopicRule"
+              }
+            ]
+          ]
+        },
+        "Action": "lambda:InvokeFunction"
+      }
+    },
+    "thumbBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-thumbs"
+            ]
+          ]
+        }
+      }
+    },
+    "iotCertRegistrationLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "iotCertRegistrationLambda"
+        },
+        "Principal": "iot.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:iot:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":rule/",
+              {
+                "Ref": "iotCertRegistrationTopicRule"
+              }
+            ]
+          ]
+        },
+        "Action": "lambda:InvokeFunction"
+      }
+    },
+    "thumbStoreRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "root",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "arn:aws:logs:*:*:*"
+                },
+                {
+                  "Action": [
+                    "s3:PutObject"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:aws:s3:::",
+                          {
+                            "Ref": "thumbBucket"
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "thumbStorePolicy": {
+      "Type": "AWS::IoT::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "iot:*",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:iot:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":topic/cloudcam/thumb/store"
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Parameters": {
+    "iotCaCertId": {
+      "Description": "IoT CA certificate id",
+      "Type": "String"
+    }
+  }
+}

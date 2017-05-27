@@ -24,6 +24,8 @@ Axis-ACAP
 # cloudcam certs
 certs/2dd9c753bf-certificate.pem.crt
 certs/2dd9c753bf-private.pem.key
+certs/*.key
+certs/verificationCert.*
 
 # Object files
 *.o
