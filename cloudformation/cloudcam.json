@@ -129,6 +129,21 @@
         },
         "Runtime": "python3.6",
         "Handler": "cloudcam_handler.save_thumb",
+        "Environment": {
+          "Variables": {
+            "S3_THUMB_BUCKET_NAME": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "-thumbs"
+                ]
+              ]
+            }
+          }
+        },
         "Code": "../lambda/cloudcam_handler"
       }
     },
@@ -259,6 +274,16 @@
                         ]
                       ]
                     }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "iot:Publish",
+                    "iot:Connect"
+                  ],
+                  "Resource": [
+                    "*"
                   ]
                 }
               ]

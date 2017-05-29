@@ -162,15 +162,16 @@ void thumbnail_requested_handler(AWS_IoT_Client *iotc, char *topic_name, unsigne
       return;
   }
 
-  printf("got endpoint\n");
   json_auto_t *endpoint = json_object_get(root, "upload_endpoint");
-  // check...
-  json_auto_t *url = json_object_get(endpoint, "url");
-  printf("got url %s\n", json_string_value(url));
+  printf("got endpoint %s\n", json_string_value(endpoint));
 
-  // upload dummy file (for testing for now)
-  // test_pub_thumb(ctx, )
-  // cloudcam_upload_file_to_s3_presigned(ctx,);
+  FILE *fp = fopen("sample/snowdino.jpg", "rb");
+  if (!fp) {
+      ERROR("error: thumb fopen failed\n");
+      return;
+  }
+  cloudcam_upload_file_to_s3_presigned(ctx,fp,json_string_value(endpoint));
+  fclose(fp);
 }
 
 // called when device shadow changes with info about what changed

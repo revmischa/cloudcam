@@ -3,10 +3,14 @@ from __future__ import print_function
 import json
 import boto3
 import logging
+import os
+
 # from pprint import pprint
 
 log = logging.getLogger("cloudcam")
 log.setLevel(logging.DEBUG)
+
+thumb_bucket_name = os.getenv("S3_THUMB_BUCKET_NAME")
 
 
 def save_thumb(event, context):
@@ -14,7 +18,7 @@ def save_thumb(event, context):
     iot_client_id, thing_name = parse_event(event)
     if not iot_client_id:
         return
-    presigned_upload_req = gen_upload_url()
+    presigned_upload_req = gen_upload_url(iot_client_id)
     ret = {'upload_endpoint': presigned_upload_req}
     publish_upload_msg(ret)
     return {'RETURN': ret}  # i don't think this does anything
@@ -69,9 +73,11 @@ def parse_event(event):
     return iot_client_id, thing_name
 
 
-def gen_upload_url():
+def gen_upload_url(iot_client_id):
     s3 = boto3.client('s3')
-    return s3.generate_presigned_post("panop", "thumb/${filename}")
+    return s3.generate_presigned_url('put_object',
+                                     Params={'Bucket': thumb_bucket_name, 'Key': f'thumb/{iot_client_id}.jpg'},
+                                     ExpiresIn=3600, HttpMethod='PUT')
 
 
 def publish_upload_msg(msg):
