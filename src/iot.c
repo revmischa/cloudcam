@@ -152,12 +152,12 @@ void thumbnail_requested_handler(AWS_IoT_Client *iotc, char *topic_name, unsigne
   json_error_t error;
   json_auto_t *root = json_loadb(params->payload, params->payloadLen, 0, &error);
 
-  if (! root) {
+  if (!root) {
       ERROR("error: on line %d: %s\n", error.line, error.text);
       return;
   }
 
-  if (! json_is_object(root)) {
+  if (!json_is_object(root)) {
       ERROR("error: root is not an object\n");
       return;
   }
@@ -170,7 +170,7 @@ void thumbnail_requested_handler(AWS_IoT_Client *iotc, char *topic_name, unsigne
       ERROR("error: thumb fopen failed\n");
       return;
   }
-  cloudcam_upload_file_to_s3_presigned(ctx,fp,json_string_value(endpoint));
+  cloudcam_upload_file_to_s3_presigned(ctx, fp, json_string_value(endpoint));
   fclose(fp);
 }
 
