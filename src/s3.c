@@ -6,9 +6,9 @@ CURL *cloudcam_get_curl_easy_handle(cloudcam_ctx *ctx) {
     return curl_easy_init();
 }
 
-long fsize(FILE *fp) {
+unsigned long fsize(FILE *fp) {
     fseek(fp, 0, SEEK_END);
-    long size = ftell(fp);
+    unsigned long size = (unsigned long)ftell(fp);
     fseek(fp, 0, SEEK_SET);
     return size;
 }
