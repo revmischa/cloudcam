@@ -1,0 +1,86 @@
+html {
+  box-sizing: border-box;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+html, body, #root {
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+p {
+  margin-bottom: 1em;
+}
+
+main {
+  overflow: auto;
+}
+
+body {
+  background-color: #fff;
+  -webkit-overflow-scrolling: touch;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  height: 100vh;
+  width: 100vw;
+}
+
+ul {
+  margin: 0px auto;
+  text-align: center;
+}
+
+li {
+  display: inline-block;
+  vertical-align: top;
+}
+
+img.thumb {
+  height: 200px;
+  width: 200px;
+  margin: 10px;
+}
+
+.form {
+  padding-top: 20px!important;
+  padding-bottom: 20px!important;
+}
+
+.form .columns {
+  flex-direction: row-reverse;
+}
+
+.notification {
+  max-width: 50vw;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.Notification {
+  position:absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+  max-height: 50px;
+  transition: bottom 0.10s linear;
+}
+
+.Notification.hidden {
+  bottom: -70px
+}
+
+.Navbar {
+  min-height: 64px!important;
+}
+
+.Navbar .nav-toggle .nav-item {
+  margin-top: 10px;
+  font-size: 20px;
+}
