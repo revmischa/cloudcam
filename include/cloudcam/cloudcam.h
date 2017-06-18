@@ -12,19 +12,23 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <curl/curl.h>
-#include <jsmn/jsmn.h>
 #include "aws_iot_mqtt_client_interface.h"
 
 // represents a cloudcam client context
 typedef struct {
     char *app_dir_path;
+    char *thing_name;
+    char *client_id;
+    char *endpoint;
+    char *ca_path;
+    char *client_crt_path;
+    char *client_key_path;
     AWS_IoT_Client *iotc;
-    jsmn_parser *json_parser;
 } cloudcam_ctx;
 
 // public functions
-int cloudcam_init_ctx(cloudcam_ctx *ctx, char *app_dir_path);
-int cloudcam_free_ctx(cloudcam_ctx *ctx);
+IoT_Error_t cloudcam_init_ctx(cloudcam_ctx *ctx, char *app_dir_path);
+IoT_Error_t cloudcam_free_ctx(cloudcam_ctx *ctx);
 IoT_Error_t cloudcam_connect_blocking(cloudcam_ctx *ctx);
 
 #endif  // CLOUDCAM_H

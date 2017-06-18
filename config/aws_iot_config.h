@@ -25,17 +25,17 @@
 
 // Get from console
 // =================================================
-#define AWS_IOT_MQTT_HOST              "a23c0yhadolyov.iot.us-west-2.amazonaws.com" ///< Customer specific MQTT HOST. The same will be used for Thing Shadow
+#define AWS_IOT_MQTT_HOST              "a1uztlgm7cysyg.iot.us-west-2.amazonaws.com" ///< Customer specific MQTT HOST. The same will be used for Thing Shadow
 #define AWS_IOT_MQTT_PORT              8883 ///< default port for MQTT/S
-#define AWS_IOT_MQTT_CLIENT_ID         "CameraTest" ///< MQTT client ID should be unique for every device
-#define AWS_IOT_MY_THING_NAME 		   "CameraTest" ///< Thing Name of the Shadow this device is associated with
-#define AWS_IOT_ROOT_CA_FILENAME       "certs/root-ca.pem" ///< Root CA file name
-#define AWS_IOT_CERTIFICATE_FILENAME   "certs/2dd9c753bf-certificate.pem.crt" ///< device signed certificate file name
-#define AWS_IOT_PRIVATE_KEY_FILENAME   "certs/2dd9c753bf-private.pem.key" ///< Device private key filename
+#define AWS_IOT_DEFAULT_THING_TYPE     "Camera" ///< Thing Name of the Shadow this device is associated with
+#define AWS_IOT_CONFIG_FILENAME        "config.json" ///< Root CA file name
+#define AWS_IOT_ROOT_CA_FILENAME       "root-ca.pem" ///< Root CA file name
+#define AWS_IOT_CERTIFICATE_FILENAME   "device.crt" ///< device signed certificate file name
+#define AWS_IOT_PRIVATE_KEY_FILENAME   "device.key" ///< Device private key filename
 // =================================================
 
 // MQTT PubSub
-#define AWS_IOT_MQTT_TX_BUF_LEN 512 ///< Any time a message is sent out through the MQTT layer. The message is copied into this buffer anytime a publish is done. This will also be used in the case of Thing Shadow
+#define AWS_IOT_MQTT_TX_BUF_LEN 8192 ///< Any time a message is sent out through the MQTT layer. The message is copied into this buffer anytime a publish is done. This will also be used in the case of Thing Shadow
 #define AWS_IOT_MQTT_RX_BUF_LEN 8192 ///< Any message that comes into the device should be less than this buffer size. If a received message is bigger than this buffer size the message will be dropped.
 #define AWS_IOT_MQTT_NUM_SUBSCRIBE_HANDLERS 5 ///< Maximum number of topic filters the MQTT client can handle at any given time. This should be increased appropriately when using Thing Shadow
 
