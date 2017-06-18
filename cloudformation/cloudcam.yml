@@ -1,0 +1,404 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  ThumbStoreTopicRule:
+    Type: 'AWS::IoT::TopicRule'
+    Properties:
+      TopicRulePayload:
+        Sql: SELECT * FROM 'cloudcam/thumb/request/*'
+        Actions:
+          - Lambda:
+              FunctionArn: !GetAtt
+                - ThumbStoreLambda
+                - Arn
+        RuleDisabled: false
+  ThumbStoreConnectedTopicRule:
+    Type: 'AWS::IoT::TopicRule'
+    Properties:
+      TopicRulePayload:
+        Sql: SELECT * FROM '$aws/events/presence/connected/#'
+        Actions:
+          - Lambda:
+              FunctionArn: !GetAtt
+                - ThumbStoreLambda
+                - Arn
+        RuleDisabled: false
+  ThumbStoreLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt
+        - ThumbStoreRole
+        - Arn
+      Runtime: python3.6
+      Handler: iot_request_thumb.handler
+      Timeout: 10
+      FunctionName: 'iot_request_thumb'
+      Environment:
+        Variables:
+          S3_THUMB_BUCKET_NAME: !Sub '${AWS::StackName}-thumbs'
+      Code: ../lambda
+  ThumbStoreLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - ThumbStoreLambda
+        - Arn
+      Principal: iot.amazonaws.com
+      SourceArn: !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:rule/${ThumbStoreTopicRule}'
+      Action: 'lambda:InvokeFunction'
+  ThumbStoreLambdaConnectedPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - ThumbStoreLambda
+        - Arn
+      Principal: iot.amazonaws.com
+      SourceArn: !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:rule/${ThumbStoreConnectedTopicRule}'
+      Action: 'lambda:InvokeFunction'
+  ThumbBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-thumbs'
+  ThumbStoreRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-ThumbStoreRole'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Effect: Allow
+                Resource: !Sub 'arn:aws:s3:::${ThumbBucket}/*'
+              - Effect: Allow
+                Action:
+                  - 'iot:Publish'
+                  - 'iot:Connect'
+                  - 'iot:UpdateThingShadow'
+                Resource:
+                  - '*'
+
+  CognitoWebRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Principal:
+                Federated: cognito-identity.amazonaws.com
+              Action:
+                - 'sts:AssumeRoleWithWebIdentity'
+              Condition:
+                StringEquals:
+                  'cognito-identity.amazonaws.com:aud': !Ref CognitoIdentityPool
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-CognitoWebRole'
+          PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 'iot:Connect'
+                    - 'iot:Subscribe'
+                    - 'iot:Publish'
+                    - 'iot:Receive'
+                  Resource: '*'
+                - Effect: 'Allow'
+                  Action:
+                    - 'lambda:InvokeFunction'
+                  Resource:
+                    - !GetAtt
+                      - IotAttachThingPolicyLambda
+                      - Arn
+                    - !GetAtt
+                      - IotProvisionThingLambda
+                      - Arn
+                    - !GetAtt
+                      - IotListThingsLambda
+                      - Arn
+                    - !GetAtt
+                      - ThumbStoreLambda
+                      - Arn
+  CognitoIdentityPool:
+    Type: 'AWS::Cognito::IdentityPool'
+    Properties:
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref CognitoClient
+          ProviderName: !GetAtt
+            - CognitoUserPool
+            - ProviderName
+      CognitoEvents:
+        SyncTrigger: !GetAtt
+          - CognitoPresignupLambda
+          - Arn
+  CognitoIdentityPoolRoleAttachment:
+    Type: 'AWS::Cognito::IdentityPoolRoleAttachment'
+    Properties:
+      IdentityPoolId: !Ref CognitoIdentityPool
+      Roles:
+        authenticated: !GetAtt
+          - CognitoWebRole
+          - Arn
+  CognitoPresignupLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-CognitoPresignupLambdaRole'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'iot:DescribeEndpoint'
+                  - 'sts:AssumeRole'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'execute-api:Invoke'
+                Resource: '*'
+  CognitoPresignupLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt
+        - CognitoPresignupLambdaRole
+        - Arn
+      Runtime: python3.6
+      Handler: cognito_presignup.handler
+      Code: ../lambda
+  CognitoPresignupLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - CognitoPresignupLambda
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: 'cognito-idp.amazonaws.com'
+      SourceArn: !GetAtt
+        - CognitoUserPool
+        - Arn
+  CognitoUserPool:
+    Type: 'AWS::Cognito::UserPool'
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}UserPool'
+      LambdaConfig:
+        PreSignUp: !GetAtt
+          - CognitoPresignupLambda
+          - Arn
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
+  CognitoClient:
+    Type: 'AWS::Cognito::UserPoolClient'
+    Properties:
+        ClientName: !Sub '${AWS::StackName}UserPoolClient'
+        GenerateSecret: false
+        UserPoolId: !Ref CognitoUserPool
+
+  IotAttachThingPolicyLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-IotAttachThingPolicyLambdaRole'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'iot:DescribeEndpoint'
+                  - 'iot:CreatePolicy'
+                  - 'iot:DeletePolicy'
+                  - 'iot:AttachPrincipalPolicy'
+                  - 'iot:DetachPrincipalPolicy'
+                  - 'iot:UpdateThing'
+                  - 'sts:AssumeRole'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'execute-api:Invoke'
+                Resource: '*'
+  IotAttachThingPolicyLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt
+        - IotAttachThingPolicyLambdaRole
+        - Arn
+      FunctionName: 'iot_attach_thing_policy'
+      Runtime: python3.6
+      Handler: iot_attach_thing_policy.handler
+      Code: ../lambda
+
+  IotProvisionThingLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-IotProvisionThingLambdaRole'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'iot:DescribeEndpoint'
+                  - 'iot:CreatePolicy'
+                  - 'iot:DeletePolicy'
+                  - 'iot:AttachPrincipalPolicy'
+                  - 'iot:DetachPrincipalPolicy'
+                  - 'iot:CreateThing'
+                  - 'iot:CreateKeysAndCertificate'
+                  - 'sts:AssumeRole'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'execute-api:Invoke'
+                Resource: '*'
+  IotProvisionThingLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt
+        - IotProvisionThingLambdaRole
+        - Arn
+      FunctionName: 'iot_provision_thing'
+      Runtime: python3.6
+      Timeout: 10
+      Handler: iot_provision_thing.handler
+      Code: ../lambda
+
+  IotListThingsLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-IotListThingsLambdaRole'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'iot:ListPrincipalPolicies'
+                  - 'iot:DescribeThing'
+                  - 'sts:AssumeRole'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'execute-api:Invoke'
+                Resource: '*'
+  IotListThingsLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt
+        - IotListThingsLambdaRole
+        - Arn
+      FunctionName: 'iot_list_things'
+      Runtime: python3.6
+      Handler: iot_list_things.handler
+      Code: ../lambda
+
+  UiBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      BucketName: !Sub '${AWS::StackName}-ui'
+Outputs:
+  IdentityPoolId:
+    Description: 'Id of the Cognito identity pool'
+    Value: !Ref CognitoIdentityPool
+  UserPoolName:
+    Description: 'Name of the Cognito user pool'
+    Value: !GetAtt
+      - CognitoUserPool
+      - ProviderName
+  UserPoolClientName:
+    Description: 'Name of the Cognito user pool web client'
+    Value: !Ref CognitoClient
+  UiUrl:
+    Description: 'URL of the UI'
+    Value: !GetAtt
+      - UiBucket
+      - WebsiteURL
