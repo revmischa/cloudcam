@@ -1,0 +1,507 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  DesiredCapacity:
+    Type: Number
+    Default: '1'
+    Description: Number of instances to launch in your ECS cluster.
+  MaxSize:
+    Type: Number
+    Default: '1'
+    Description: Maximum number of instances that can be launched in your ECS cluster.
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.nano
+    AllowedValues: [t2.nano, t2.micro, t2.small, t2.medium, t2.large, m3.medium, m3.large,
+      m3.xlarge, m3.2xlarge, m4.large, m4.xlarge, m4.2xlarge, m4.4xlarge, m4.10xlarge,
+      c4.large, c4.xlarge, c4.2xlarge, c4.4xlarge, c4.8xlarge, c3.large, c3.xlarge,
+      c3.2xlarge, c3.4xlarge, c3.8xlarge, r3.large, r3.xlarge, r3.2xlarge, r3.4xlarge,
+      r3.8xlarge, i2.xlarge, i2.2xlarge, i2.4xlarge, i2.8xlarge]
+    ConstraintDescription: Please choose a valid instance type.
+Mappings:
+  AWSRegionToAMI:
+    us-east-1:
+      AMIID: ami-04351e12
+    us-east-2:
+      AMIID: ami-207b5a45
+    us-west-1:
+      AMIID: ami-7d664a1d
+    us-west-2:
+      AMIID: ami-57d9cd2e
+    eu-west-1:
+      AMIID: ami-809f84e6
+    eu-west-2:
+      AMIID: ami-ff15039b
+    eu-central-1:
+      AMIID: ami-a3a006cc
+    ap-northeast-1:
+      AMIID: ami-e4657283
+    ap-southeast-1:
+      AMIID: ami-19f7787a
+    ap-southeast-2:
+      AMIID: ami-42e9f921
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Security Group
+  EcsSecurityGroupHTTPJanusDemoInbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt [EcsSecurityGroup, GroupId]
+      IpProtocol: tcp
+      FromPort: '8080'
+      ToPort: '8080'
+      CidrIp: 0.0.0.0/0
+  EcsSecurityGroupHTTPSinbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt [EcsSecurityGroup, GroupId]
+      IpProtocol: tcp
+      FromPort: '8089'
+      ToPort: '8089'
+      CidrIp: 0.0.0.0/0
+  EcsSecurityGroupHTTPSAdminInbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt [EcsSecurityGroup, GroupId]
+      IpProtocol: tcp
+      FromPort: '7889'
+      ToPort: '7889'
+      CidrIp: 0.0.0.0/0
+  EcsSecurityGroupWebSocketsInbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt [EcsSecurityGroup, GroupId]
+      IpProtocol: tcp
+      FromPort: '8188'
+      ToPort: '8188'
+      CidrIp: 0.0.0.0/0
+  EcsSecurityGroupRTPports:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt [EcsSecurityGroup, GroupId]
+      IpProtocol: udp
+      FromPort: '10000'
+      ToPort: '60000'
+      CidrIp: 0.0.0.0/0
+  CloudwatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['-', [ECSLogGroup, !Ref 'AWS::StackName']]
+      RetentionInDays: 14
+  JanusTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Join ['', [!Ref 'AWS::StackName', -janus]]
+      ContainerDefinitions:
+      - Name: janus
+        Cpu: '100'
+        Essential: 'true'
+        Image: somebodyelse/docker-janus:latest
+        Memory: '100'
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref 'CloudwatchLogsGroup'
+            awslogs-region: !Ref 'AWS::Region'
+            awslogs-stream-prefix: janus
+        PortMappings:
+          - ContainerPort: 8080
+            HostPort: 8080
+          - ContainerPort: 8088
+            HostPort: 8088
+          - ContainerPort: 8089
+            HostPort: 8089
+          - ContainerPort: 7889
+            HostPort: 7889
+          - ContainerPort: 8188
+            HostPort: 8188
+          # due to ECS limitation we can't map port ranges and the total port count is limited to 100
+          # so 10000-10044 and 20000-20044 are mapped for now, allowing up to 20 sessions per container
+          - ContainerPort: 10000
+            HostPort: 10000
+            Protocol: udp
+          - ContainerPort: 10001
+            HostPort: 10001
+            Protocol: udp
+          - ContainerPort: 10002
+            HostPort: 10002
+            Protocol: udp
+          - ContainerPort: 10003
+            HostPort: 10003
+            Protocol: udp
+          - ContainerPort: 10004
+            HostPort: 10004
+            Protocol: udp
+          - ContainerPort: 10005
+            HostPort: 10005
+            Protocol: udp
+          - ContainerPort: 10006
+            HostPort: 10006
+            Protocol: udp
+          - ContainerPort: 10007
+            HostPort: 10007
+            Protocol: udp
+          - ContainerPort: 10008
+            HostPort: 10008
+            Protocol: udp
+          - ContainerPort: 10009
+            HostPort: 10009
+            Protocol: udp
+          - ContainerPort: 10010
+            HostPort: 10010
+            Protocol: udp
+          - ContainerPort: 10011
+            HostPort: 10011
+            Protocol: udp
+          - ContainerPort: 10012
+            HostPort: 10012
+            Protocol: udp
+          - ContainerPort: 10013
+            HostPort: 10013
+            Protocol: udp
+          - ContainerPort: 10014
+            HostPort: 10014
+            Protocol: udp
+          - ContainerPort: 10015
+            HostPort: 10015
+            Protocol: udp
+          - ContainerPort: 10016
+            HostPort: 10016
+            Protocol: udp
+          - ContainerPort: 10017
+            HostPort: 10017
+            Protocol: udp
+          - ContainerPort: 10018
+            HostPort: 10018
+            Protocol: udp
+          - ContainerPort: 10019
+            HostPort: 10019
+            Protocol: udp
+          - ContainerPort: 10020
+            HostPort: 10020
+            Protocol: udp
+          - ContainerPort: 10021
+            HostPort: 10021
+            Protocol: udp
+          - ContainerPort: 10022
+            HostPort: 10022
+            Protocol: udp
+          - ContainerPort: 10023
+            HostPort: 10023
+            Protocol: udp
+          - ContainerPort: 10024
+            HostPort: 10024
+            Protocol: udp
+          - ContainerPort: 10025
+            HostPort: 10025
+            Protocol: udp
+          - ContainerPort: 10026
+            HostPort: 10026
+            Protocol: udp
+          - ContainerPort: 10027
+            HostPort: 10027
+            Protocol: udp
+          - ContainerPort: 10028
+            HostPort: 10028
+            Protocol: udp
+          - ContainerPort: 10029
+            HostPort: 10029
+            Protocol: udp
+          - ContainerPort: 10030
+            HostPort: 10030
+            Protocol: udp
+          - ContainerPort: 10031
+            HostPort: 10031
+            Protocol: udp
+          - ContainerPort: 10032
+            HostPort: 10032
+            Protocol: udp
+          - ContainerPort: 10033
+            HostPort: 10033
+            Protocol: udp
+          - ContainerPort: 10034
+            HostPort: 10034
+            Protocol: udp
+          - ContainerPort: 10035
+            HostPort: 10035
+            Protocol: udp
+          - ContainerPort: 10036
+            HostPort: 10036
+            Protocol: udp
+          - ContainerPort: 10037
+            HostPort: 10037
+            Protocol: udp
+          - ContainerPort: 10038
+            HostPort: 10038
+            Protocol: udp
+          - ContainerPort: 10039
+            HostPort: 10039
+            Protocol: udp
+          - ContainerPort: 10040
+            HostPort: 10040
+            Protocol: udp
+          - ContainerPort: 10041
+            HostPort: 10041
+            Protocol: udp
+          - ContainerPort: 10042
+            HostPort: 10042
+            Protocol: udp
+          - ContainerPort: 10043
+            HostPort: 10043
+            Protocol: udp
+          - ContainerPort: 10044
+            HostPort: 10044
+            Protocol: udp
+          
+          - ContainerPort: 20000
+            HostPort: 20000
+            Protocol: udp 
+          - ContainerPort: 20001
+            HostPort: 20001
+            Protocol: udp 
+          - ContainerPort: 20002
+            HostPort: 20002
+            Protocol: udp 
+          - ContainerPort: 20003
+            HostPort: 20003
+            Protocol: udp 
+          - ContainerPort: 20004
+            HostPort: 20004
+            Protocol: udp 
+          - ContainerPort: 20005
+            HostPort: 20005
+            Protocol: udp 
+          - ContainerPort: 20006
+            HostPort: 20006
+            Protocol: udp 
+          - ContainerPort: 20007
+            HostPort: 20007
+            Protocol: udp 
+          - ContainerPort: 20008
+            HostPort: 20008
+            Protocol: udp 
+          - ContainerPort: 20009
+            HostPort: 20009
+            Protocol: udp 
+          - ContainerPort: 20010
+            HostPort: 20010
+            Protocol: udp 
+          - ContainerPort: 20011
+            HostPort: 20011
+            Protocol: udp 
+          - ContainerPort: 20012
+            HostPort: 20012
+            Protocol: udp 
+          - ContainerPort: 20013
+            HostPort: 20013
+            Protocol: udp 
+          - ContainerPort: 20014
+            HostPort: 20014
+            Protocol: udp 
+          - ContainerPort: 20015
+            HostPort: 20015
+            Protocol: udp 
+          - ContainerPort: 20016
+            HostPort: 20016
+            Protocol: udp 
+          - ContainerPort: 20017
+            HostPort: 20017
+            Protocol: udp 
+          - ContainerPort: 20018
+            HostPort: 20018
+            Protocol: udp 
+          - ContainerPort: 20019
+            HostPort: 20019
+            Protocol: udp 
+          - ContainerPort: 20020
+            HostPort: 20020
+            Protocol: udp 
+          - ContainerPort: 20021
+            HostPort: 20021
+            Protocol: udp 
+          - ContainerPort: 20022
+            HostPort: 20022
+            Protocol: udp 
+          - ContainerPort: 20023
+            HostPort: 20023
+            Protocol: udp 
+          - ContainerPort: 20024
+            HostPort: 20024
+            Protocol: udp 
+          - ContainerPort: 20025
+            HostPort: 20025
+            Protocol: udp 
+          - ContainerPort: 20026
+            HostPort: 20026
+            Protocol: udp 
+          - ContainerPort: 20027
+            HostPort: 20027
+            Protocol: udp 
+          - ContainerPort: 20028
+            HostPort: 20028
+            Protocol: udp 
+          - ContainerPort: 20029
+            HostPort: 20029
+            Protocol: udp 
+          - ContainerPort: 20030
+            HostPort: 20030
+            Protocol: udp 
+          - ContainerPort: 20031
+            HostPort: 20031
+            Protocol: udp 
+          - ContainerPort: 20032
+            HostPort: 20032
+            Protocol: udp 
+          - ContainerPort: 20033
+            HostPort: 20033
+            Protocol: udp 
+          - ContainerPort: 20034
+            HostPort: 20034
+            Protocol: udp 
+          - ContainerPort: 20035
+            HostPort: 20035
+            Protocol: udp 
+          - ContainerPort: 20036
+            HostPort: 20036
+            Protocol: udp 
+          - ContainerPort: 20037
+            HostPort: 20037
+            Protocol: udp 
+          - ContainerPort: 20038
+            HostPort: 20038
+            Protocol: udp 
+          - ContainerPort: 20039
+            HostPort: 20039
+            Protocol: udp 
+          - ContainerPort: 20040
+            HostPort: 20040
+            Protocol: udp 
+          - ContainerPort: 20041
+            HostPort: 20041
+            Protocol: udp 
+          - ContainerPort: 20042
+            HostPort: 20042
+            Protocol: udp 
+          - ContainerPort: 20043
+            HostPort: 20043
+            Protocol: udp 
+          - ContainerPort: 20044
+            HostPort: 20044
+            Protocol: udp 
+
+
+
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones:
+        Fn::GetAZs:
+          !Ref 'AWS::Region'
+#      VPCZoneIdentifier: !Ref 'SubnetId'
+      LaunchConfigurationName: !Ref 'ContainerInstances'
+      MinSize: '1'
+      MaxSize: !Ref 'MaxSize'
+      DesiredCapacity: !Ref 'DesiredCapacity'
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: 'true'
+  ContainerInstances:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !FindInMap [AWSRegionToAMI, !Ref 'AWS::Region', AMIID]
+      SecurityGroups: [!Ref 'EcsSecurityGroup']
+      InstanceType: !Ref 'InstanceType'
+      IamInstanceProfile: !Ref 'EC2InstanceProfile'
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ECSAutoScalingGroup --region ${AWS::Region}
+  JanusService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref 'ECSCluster'
+      DesiredCount: '1'
+      TaskDefinition: !Ref JanusTaskDefinition
+  ServiceScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn: JanusService
+    Properties:
+      MaxCapacity: 2
+      MinCapacity: 1
+      ResourceId: !Join ['', [service/, !Ref 'ECSCluster', /, !GetAtt [JanusService, Name]]]
+      RoleARN: !GetAtt [AutoscalingRole, Arn]
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+  ServiceScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: AStepPolicy
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref 'ServiceScalingTarget'
+      StepScalingPolicyConfiguration:
+        AdjustmentType: PercentChangeInCapacity
+        Cooldown: 60
+        MetricAggregationType: Average
+        StepAdjustments:
+        - MetricIntervalLowerBound: 0
+          ScalingAdjustment: 200
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['ecs:CreateCluster', 'ecs:DeregisterContainerInstance', 'ecs:DiscoverPollEndpoint',
+              'ecs:Poll', 'ecs:RegisterContainerInstance', 'ecs:StartTelemetrySession',
+              'ecs:Submit*', 'logs:CreateLogStream', 'logs:PutLogEvents']
+            Resource: '*'
+  AutoscalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [application-autoscaling.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: service-autoscaling
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['application-autoscaling:*', 'cloudwatch:DescribeAlarms', 'cloudwatch:PutMetricAlarm',
+              'ecs:DescribeServices', 'ecs:UpdateService']
+            Resource: '*'
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref 'EC2Role']
+
+Outputs:
+  ecsservice:
+    Value: !Ref JanusService
+  ecscluster:
+    Value: !Ref ECSCluster
+  taskdef:
+    Value: !Ref JanusTaskDefinition
+
