@@ -1,23 +1,22 @@
 import React from 'react'
 import {connect} from 'react-redux'
-import {refreshThings, requestThumbs} from '../api/iot'
+import {refreshThings, requestThumbs, startStreaming, stopStreaming} from '../api/iot'
 
 class Home extends React.Component {
   constructor(props) {
-    super(props)
+    super(props);
     this.state = {
       things: [],
       user: false
-    }
+    };
   }
 
   render() {
-    const {things} = this.props
+    const {things} = this.props;
     return (
       <div>
         <section className='section content container'>
-          <h2 className='title'>Things <a onClick={refreshThings}><i className='fa fa-refresh'
-                                                                     aria-hidden='true'></i></a>
+          <h2 className='title'>Things <a onClick={refreshThings}><i className='fa fa-refresh'/></a>
           </h2>
           <div>
             {Object.entries(things).length === 0 && <div>No things</div>}
@@ -25,10 +24,21 @@ class Home extends React.Component {
               {Object.entries(things).map(function ([key, thing]) {
                 return <li>
                   <div>
-                    <p><img id={thing.name} className='thumb' src={thing.thumbUrl}/></p>
+                    <p>
+                      <img id={thing.name} className='thumb' style={{display: thing.isStreaming ? 'none' : 'block'}}
+                           src={thing.thumbUrl}/>
+                      <video id={thing.name} style={{display: thing.isStreaming ? 'block' : 'none'}} autoPlay/>
+                    </p>
                     {thing.name}&nbsp;
-                    <a onClick={() => requestThumbs([thing.name])}><i className='fa fa-refresh'
-                                                                       aria-hidden='true'/></a>
+                    <a style={{display: thing.isStreaming ? 'none' : 'inline-block'}}
+                       onClick={() => requestThumbs([thing.name])}><i className='fa fa-refresh'/></a>&nbsp;
+                    <a onClick={() => {
+                      if (!thing.isStreaming) {
+                        startStreaming(thing.name);
+                      } else {
+                        stopStreaming(thing.name);
+                      }
+                    }}><i className={thing.isStreaming ? 'fa fa-stop' : 'fa fa-play'}/></a>&nbsp;
                   </div>
                 </li>
               })}

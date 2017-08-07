@@ -7,7 +7,7 @@ import store from '../store'
 
 class Provision extends React.Component {
   constructor(props) {
-    super(props)
+    super(props);
     this.state = {
       thingConfig: null
     }

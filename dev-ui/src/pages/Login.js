@@ -9,8 +9,13 @@ export default class Login extends React.Component {
   onSubmit (form) {
     return login(form)
       .then(data => {
-        browserHistory.push('/')
-        success('Logged in.')
+        browserHistory.push('/');
+        window.Janus.init({
+          debug: "all", callback: function () {
+            console.log("Janus init completed");
+            success('Logged in.')
+          }
+        });
       })
       .catch(e => {
         error(e && e.message ? e.message : 'Could not login.')
@@ -39,4 +44,4 @@ export default class Login extends React.Component {
 Login.route = {
   path: 'login',
   component: Login
-}
+};

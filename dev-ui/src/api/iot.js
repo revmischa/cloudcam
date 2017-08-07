@@ -256,6 +256,153 @@ export function requestThumbs(thingNames) {
   })
 }
 
+export function startStreaming(thingName) {
+  return new Promise((resolve, reject) => {
+    console.log('startStreaming: ' + thingName);
+    let Janus = window.Janus;
+    if (!Janus.isWebrtcSupported()) {
+      reject("No WebRTC support... ");
+    }
+    let params = {
+      FunctionName: "janus_start_stream",
+      Payload: JSON.stringify({
+        thingName: thingName
+        // forceReallocate: true
+      })
+    };
+    let lambda = new window.AWS.Lambda();
+    lambda.invoke(params, function (err, data) {
+      if (err) {
+        console.log(err);
+        reject(err);
+      }
+      else {
+        console.log(data);
+        let result = JSON.parse(data.Payload);
+        let primary = result.primary;
+        let standby = result.standby;
+        // todo: implement primary/standby track switching
+        let opaqueId = "cloudcam-dev-ui-" + Janus.randomString(12);
+        var streaming = null;
+        let stopStream = function () {
+          var body = {"request": "stop"};
+          streaming.send({"message": body});
+          streaming.hangup();
+        };
+        var janus = new Janus({
+          server: primary.gateway_url,
+          success: function () {
+            // Attach to streaming plugin
+            janus.attach({
+              plugin: "janus.plugin.streaming",
+              opaqueId: opaqueId,
+              success: function (pluginHandle) {
+                streaming = pluginHandle;
+                Janus.log("Plugin attached! (" + streaming.getPlugin() + ", id=" + streaming.getId() + ")");
+                var body = {
+                  request: "watch",
+                  id: primary.stream_id
+                  // pin: primary.stream_pin
+                };
+                streaming.send({"message": body});
+              },
+              error: function (error) {
+                Janus.error("  -- Error attaching plugin... ", error);
+                reject(error);
+              },
+              onmessage: function (msg, jsep) {
+                Janus.debug(" ::: Got a message :::");
+                Janus.debug(JSON.stringify(msg));
+                var result = msg["result"];
+                if (result !== null && result !== undefined) {
+                  if (result["status"] !== undefined && result["status"] !== null) {
+                    var status = result["status"];
+                    if (status === 'stopped')
+                      stopStream();
+                  }
+                } else if (msg["error"] !== undefined && msg["error"] !== null) {
+                  Janus.debug(msg["error"]);
+                  reject(msg["error"]);
+                  return;
+                }
+                if (jsep !== undefined && jsep !== null) {
+                  Janus.debug("Handling SDP as well...");
+                  Janus.debug(jsep);
+                  // Answer
+                  streaming.createAnswer(
+                    {
+                      jsep: jsep,
+                      media: {audioSend: false, videoSend: false},	// We want recvonly audio/video
+                      success: function (jsep) {
+                        Janus.debug("Got SDP!");
+                        Janus.debug(jsep);
+                        var body = {"request": "start"};
+                        streaming.send({"message": body, "jsep": jsep});
+                      },
+                      error: function (error) {
+                        Janus.error("WebRTC error:", error);
+                        reject(error);
+                      }
+                    });
+                }
+              },
+              onremotestream: function (stream) {
+                Janus.debug(" ::: Got a remote stream :::");
+                Janus.debug(JSON.stringify(stream));
+                store.dispatch({
+                  type: 'iot/startStreaming', thingName: thingName, stopStreamFn: stopStream
+                });
+                Janus.attachMediaStream(document.querySelector("video#" + thingName), stream);
+                resolve({});
+              },
+              oncleanup: function () {
+                Janus.log(" ::: Got a cleanup notification :::");
+                store.dispatch({
+                  type: 'iot/stopStreaming', thingName: thingName
+                });
+              }
+            });
+          },
+          error: function (error) {
+            Janus.error(error);
+            resolve(error);
+          },
+          destroyed: function () {
+          }
+        })
+      }
+    })
+  })
+}
+
+export function stopStreaming(thingName) {
+  return new Promise((resolve, reject) => {
+    console.log('stopStreaming: ' + thingName);
+    if (store.getState().iot.things[thingName] && store.getState().iot.things[thingName]['stopStreamFn']) {
+      store.getState().iot.things[thingName]['stopStreamFn']();
+    }
+    let params = {
+      FunctionName: "janus_stop_stream",
+      Payload: JSON.stringify({
+        thingName: thingName
+      })
+    };
+    let lambda = new window.AWS.Lambda();
+    lambda.invoke(params, function (err, data) {
+      if (err) {
+        console.log(err);
+        reject(err);
+      }
+      else {
+        console.log(data);
+        store.dispatch({
+          type: 'iot/stopStreaming', thingName: thingName
+        });
+      }
+    })
+  })
+}
+
 export function reducer(state = {things: {}}, action) {
   let newState;
   switch (action.type) {
@@ -266,6 +413,17 @@ export function reducer(state = {things: {}}, action) {
         return o
       }, {});
       console.log("iot/things new state: " + JSON.stringify(newState));
+      return newState;
+    case 'iot/startStreaming':
+      newState = JSON.parse(JSON.stringify(state));
+      newState.things[action.thingName].isStreaming = true;
+      newState.things[action.thingName].stopStreamFn = action.stopStreamFn;
+      console.log("iot/startStreaming new state: " + JSON.stringify(newState));
+      return newState;
+    case 'iot/stopStreaming':
+      newState = JSON.parse(JSON.stringify(state));
+      newState.things[action.thingName].isStreaming = false;
+      console.log("iot/stopStreaming new state: " + JSON.stringify(newState));
       return newState;
     case 'iot/thumb':
       newState = JSON.parse(JSON.stringify(state));
