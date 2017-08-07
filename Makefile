@@ -46,7 +46,7 @@ INCLUDE_DIRS += -I $(JANSSON_DIR)/build/include
 
 ###### --- link flags
 TLS_LIB_FILES = -L$(TLS_LIB_DIR) -l:libmbedtls.a -l:libmbedcrypto.a -l:libmbedx509.a
-LDFLAGS += -L$(CURL_LIB_DIR) -l:libcurl.a
+LDFLAGS += -L$(CURL_LIB_DIR) -l:libcurl.a -lz
 LDFLAGS += -L$(JANSSON_LIB_DIR) -l:libjansson.a
 LDFLAGS += -L$(VENDOR_DIR) -laws-iot
 LDFLAGS += $(TLS_LIB_FILES) -lpthread
