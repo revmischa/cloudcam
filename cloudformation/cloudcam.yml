@@ -7,9 +7,7 @@ Resources:
         Sql: SELECT * FROM 'cloudcam/thumb/request/*'
         Actions:
           - Lambda:
-              FunctionArn: !GetAtt
-                - ThumbStoreLambda
-                - Arn
+              FunctionArn: !GetAtt [ThumbStoreLambda, Arn]
         RuleDisabled: false
   ThumbStoreConnectedTopicRule:
     Type: 'AWS::IoT::TopicRule'
@@ -18,16 +16,12 @@ Resources:
         Sql: SELECT * FROM '$aws/events/presence/connected/#'
         Actions:
           - Lambda:
-              FunctionArn: !GetAtt
-                - ThumbStoreLambda
-                - Arn
+              FunctionArn: !GetAtt [ThumbStoreLambda, Arn]
         RuleDisabled: false
   ThumbStoreLambda:
     Type: 'AWS::Lambda::Function'
     Properties:
-      Role: !GetAtt
-        - ThumbStoreRole
-        - Arn
+      Role: !GetAtt [ThumbStoreRole, Arn]
       Runtime: python3.6
       Handler: iot_request_thumb.handler
       Timeout: 10
@@ -39,18 +33,14 @@ Resources:
   ThumbStoreLambdaPermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
-      FunctionName: !GetAtt
-        - ThumbStoreLambda
-        - Arn
+      FunctionName: !GetAtt [ThumbStoreLambda, Arn]
       Principal: iot.amazonaws.com
       SourceArn: !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:rule/${ThumbStoreTopicRule}'
       Action: 'lambda:InvokeFunction'
   ThumbStoreLambdaConnectedPermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
-      FunctionName: !GetAtt
-        - ThumbStoreLambda
-        - Arn
+      FunctionName: !GetAtt [ThumbStoreLambda, Arn]
       Principal: iot.amazonaws.com
       SourceArn: !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:rule/${ThumbStoreConnectedTopicRule}'
       Action: 'lambda:InvokeFunction'
@@ -125,39 +115,27 @@ Resources:
                   Action:
                     - 'lambda:InvokeFunction'
                   Resource:
-                    - !GetAtt
-                      - IotAttachThingPolicyLambda
-                      - Arn
-                    - !GetAtt
-                      - IotProvisionThingLambda
-                      - Arn
-                    - !GetAtt
-                      - IotListThingsLambda
-                      - Arn
-                    - !GetAtt
-                      - ThumbStoreLambda
-                      - Arn
+                    - !GetAtt [IotAttachThingPolicyLambda, Arn]
+                    - !GetAtt [IotProvisionThingLambda, Arn]
+                    - !GetAtt [IotListThingsLambda, Arn]
+                    - !GetAtt [JanusStartStreamLambda, Arn]
+                    - !GetAtt [JanusStopStreamLambda, Arn]
+                    - !GetAtt [ThumbStoreLambda, Arn]
   CognitoIdentityPool:
     Type: 'AWS::Cognito::IdentityPool'
     Properties:
       AllowUnauthenticatedIdentities: false
       CognitoIdentityProviders:
         - ClientId: !Ref CognitoClient
-          ProviderName: !GetAtt
-            - CognitoUserPool
-            - ProviderName
+          ProviderName: !GetAtt [CognitoUserPool, ProviderName]
       CognitoEvents:
-        SyncTrigger: !GetAtt
-          - CognitoPresignupLambda
-          - Arn
+        SyncTrigger: !GetAtt [CognitoPresignupLambda, Arn]
   CognitoIdentityPoolRoleAttachment:
     Type: 'AWS::Cognito::IdentityPoolRoleAttachment'
     Properties:
       IdentityPoolId: !Ref CognitoIdentityPool
       Roles:
-        authenticated: !GetAtt
-          - CognitoWebRole
-          - Arn
+        authenticated: !GetAtt [CognitoWebRole, Arn]
   CognitoPresignupLambdaRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -194,31 +172,23 @@ Resources:
   CognitoPresignupLambda:
     Type: 'AWS::Lambda::Function'
     Properties:
-      Role: !GetAtt
-        - CognitoPresignupLambdaRole
-        - Arn
+      Role: !GetAtt [CognitoPresignupLambdaRole, Arn]
       Runtime: python3.6
       Handler: cognito_presignup.handler
       Code: ../lambda
   CognitoPresignupLambdaPermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
-      FunctionName: !GetAtt
-        - CognitoPresignupLambda
-        - Arn
+      FunctionName: !GetAtt [CognitoPresignupLambda, Arn]
       Action: 'lambda:InvokeFunction'
       Principal: 'cognito-idp.amazonaws.com'
-      SourceArn: !GetAtt
-        - CognitoUserPool
-        - Arn
+      SourceArn: !GetAtt [CognitoUserPool, Arn]
   CognitoUserPool:
     Type: 'AWS::Cognito::UserPool'
     Properties:
       UserPoolName: !Sub '${AWS::StackName}UserPool'
       LambdaConfig:
-        PreSignUp: !GetAtt
-          - CognitoPresignupLambda
-          - Arn
+        PreSignUp: !GetAtt [CognitoPresignupLambda, Arn]
       Policies:
         PasswordPolicy:
           MinimumLength: 8
@@ -274,9 +244,7 @@ Resources:
   IotAttachThingPolicyLambda:
     Type: 'AWS::Lambda::Function'
     Properties:
-      Role: !GetAtt
-        - IotAttachThingPolicyLambdaRole
-        - Arn
+      Role: !GetAtt [IotAttachThingPolicyLambdaRole, Arn]
       FunctionName: 'iot_attach_thing_policy'
       Runtime: python3.6
       Handler: iot_attach_thing_policy.handler
@@ -324,9 +292,7 @@ Resources:
   IotProvisionThingLambda:
     Type: 'AWS::Lambda::Function'
     Properties:
-      Role: !GetAtt
-        - IotProvisionThingLambdaRole
-        - Arn
+      Role: !GetAtt [IotProvisionThingLambdaRole, Arn]
       FunctionName: 'iot_provision_thing'
       Runtime: python3.6
       Timeout: 10
@@ -370,9 +336,7 @@ Resources:
   IotListThingsLambda:
     Type: 'AWS::Lambda::Function'
     Properties:
-      Role: !GetAtt
-        - IotListThingsLambdaRole
-        - Arn
+      Role: !GetAtt [IotListThingsLambdaRole, Arn]
       FunctionName: 'iot_list_things'
       Runtime: python3.6
       Handler: iot_list_things.handler
@@ -385,20 +349,117 @@ Resources:
       WebsiteConfiguration:
         IndexDocument: index.html
       BucketName: !Sub '${AWS::StackName}-ui'
+
+  JanusStartStreamLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-JanusStartStreamLambdaRole'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'sts:AssumeRole'
+                  - 'iot:Publish'
+                  - 'iot:Connect'
+                  - 'iot:GetThingShadow'
+                  - 'iot:UpdateThingShadow'
+                  - 'ecs:ListClusters'
+                  - 'ecs:ListContainerInstances'
+                  - 'ecs:DescribeContainerInstances'
+                  - 'ec2:DescribeInstances'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'execute-api:Invoke'
+                Resource: '*'
+  JanusStartStreamLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt [JanusStartStreamLambdaRole, Arn]
+      FunctionName: 'janus_start_stream'
+      Runtime: python3.6
+      Handler: janus_start_stream.handler
+      Timeout: 10
+      Code: ../lambda
+
+  JanusStopStreamLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-JanusStopStreamLambdaRole'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'sts:AssumeRole'
+                  - 'iot:Publish'
+                  - 'iot:Connect'
+                  - 'iot:GetThingShadow'
+                  - 'iot:UpdateThingShadow'
+                  - 'ecs:ListClusters'
+                  - 'ecs:ListContainerInstances'
+                  - 'ecs:DescribeContainerInstances'
+                  - 'ec2:DescribeInstances'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'execute-api:Invoke'
+                Resource: '*'
+  JanusStopStreamLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt [JanusStopStreamLambdaRole, Arn]
+      FunctionName: 'janus_stop_stream'
+      Runtime: python3.6
+      Handler: janus_stop_stream.handler
+      Timeout: 10
+      Code: ../lambda
+
 Outputs:
   IdentityPoolId:
     Description: 'Id of the Cognito identity pool'
     Value: !Ref CognitoIdentityPool
   UserPoolName:
     Description: 'Name of the Cognito user pool'
-    Value: !GetAtt
-      - CognitoUserPool
-      - ProviderName
+    Value: !GetAtt [CognitoUserPool, ProviderName]
   UserPoolClientName:
     Description: 'Name of the Cognito user pool web client'
     Value: !Ref CognitoClient
   UiUrl:
     Description: 'URL of the UI'
-    Value: !GetAtt
-      - UiBucket
-      - WebsiteURL
+    Value: !GetAtt [UiBucket, WebsiteURL]
