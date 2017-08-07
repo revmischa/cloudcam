@@ -17,7 +17,8 @@
 extern const char *CLOUDCAM_TOPIC_THUMBNAIL_TEST;
 
 // callback handlers
-void thumb_upload_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js);
+void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js);
+void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js);
 void cloudcam_iot_disconnect_handler(AWS_IoT_Client *, void *);
 
 // setup funcs

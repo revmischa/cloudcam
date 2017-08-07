@@ -1,6 +1,7 @@
 // Routines for interfacing with AWS IoT
 
 #include <cloudcam/cloudcam.h>
+#include <signal.h>
 #include <jansson.h>
 #include <curl/curl.h>
 #include "cloudcam/iot.h"
@@ -127,22 +128,37 @@ static cloudcam_ctx *delta_handler_ctx = NULL;
 IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx) {
   assert(ctx != NULL);
 
-  static char delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
-  static jsonStruct_t delta = {
-    .cb = thumb_upload_handler,
-    .pData = delta_buffer,
+  assert(delta_handler_ctx == NULL || delta_handler_ctx == ctx);
+  delta_handler_ctx = ctx;
+
+  static char thumb_upload_delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
+  static jsonStruct_t thumb_upload_delta = {
+    .cb = shadow_thumb_upload_delta_handler,
+    .pData = thumb_upload_delta_buffer,
     .pKey = "thumb_upload",
     .type = SHADOW_JSON_OBJECT
   };
 
-  assert(delta_handler_ctx == NULL || delta_handler_ctx == ctx);
-  delta_handler_ctx = ctx;
-
-  IoT_Error_t rc = aws_iot_shadow_register_delta(ctx->iotc, &delta);
+  IoT_Error_t rc = aws_iot_shadow_register_delta(ctx->iotc, &thumb_upload_delta);
   if (SUCCESS != rc) {
     ERROR("Shadow Register Delta Error");
   } else {
-    INFO("Registered for shadow delta updates");
+    INFO("Registered for thumb_upload shadow delta updates");
+  }
+
+  static char streams_delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
+  static jsonStruct_t streams_delta = {
+    .cb = shadow_streams_delta_handler,
+    .pData = streams_delta_buffer,
+    .pKey = "streams",
+    .type = SHADOW_JSON_OBJECT
+  };
+
+  rc = aws_iot_shadow_register_delta(ctx->iotc, &streams_delta);
+  if (SUCCESS != rc) {
+    ERROR("Shadow Register Delta Error");
+  } else {
+    INFO("Registered for streams shadow delta updates");
   }
   return rc;
 }
@@ -203,11 +219,11 @@ IoT_Error_t download_file(const char *url, const char *path) {
 }
 
 // called when device shadow changes with info about what changed
-void thumb_upload_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {
+void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {
   cloudcam_ctx *ctx = delta_handler_ctx;
   assert(ctx != NULL);
 
-  INFO("thumb_upload_handler handler");
+  INFO("shadow_thumb_upload_delta_handler");
 
   if (json_str && json_str_len > 0 && js) {
     // parse json under "upload_url" key
@@ -254,6 +270,94 @@ void thumb_upload_handler(const char *json_str, uint32_t json_str_len, jsonStruc
     rc = aws_iot_shadow_update(ctx->iotc, ctx->thing_name, json_buf, shadow_update_callback, ctx, 30, 1);
     if (rc < 0) {
       ERROR("Shadow update error: %d", rc);
+    }
+
+    // release json object
+    json_decref(root);
+  }
+}
+
+static pid_t gstreamer_pid = 0;
+static char *prev_streams_json = NULL;
+
+void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {
+  cloudcam_ctx *ctx = delta_handler_ctx;
+  assert(ctx != NULL);
+
+  INFO("shadow_streams_delta_handler");
+  INFO("%.*s", json_str_len, json_str);
+
+  char *json_str_copy = strndup(json_str, json_str_len);
+  if (prev_streams_json && strcmp(prev_streams_json, json_str_copy) == 0) {
+    free(json_str_copy);
+    INFO("no stream state changes, ignoring the delta");
+    return;
+  }
+
+  if (json_str && json_str_len > 0 && js) {
+    json_error_t json_error;
+    json_t *root = json_loadb(json_str, json_str_len, 0, &json_error);
+    if (root == NULL) {
+      ERROR("error: payload parsing error: %s at %s\n", json_error.text, json_error.source);
+      return;
+    }
+    json_t *current = json_object_get(root, "current");
+    if (!current || json_is_null(current)) {
+      if (gstreamer_pid != 0) {
+        INFO("Killing gstreamer process (pid %d)", gstreamer_pid);
+        kill(gstreamer_pid, SIGTERM);
+        gstreamer_pid = 0;
+      }
+    } else {
+      json_t *session_root = NULL;
+      if (json_is_string(current) && strcmp("primary", json_string_value(current)) == 0) {
+        session_root = json_object_get(root, "primary");
+      } else if (json_is_string(current) && strcmp("standby", json_string_value(current)) == 0) {
+        session_root = json_object_get(root, "standby");
+      } else {
+        ERROR("error: invalid value at the 'streams.current' node\n");
+        return;
+      }
+      json_t *gateway_instance = json_object_get(session_root, "gateway_instance");
+      if (gateway_instance == NULL) {
+        ERROR("error: payload missing 'gateway_instance' key\n");
+        return;
+      }
+      json_t *stream_rtp_port = json_object_get(session_root, "stream_rtp_port");
+      if (stream_rtp_port == NULL) {
+        ERROR("error: payload missing 'stream_rtp_port' key\n");
+        return;
+      }
+      json_t *stream_h264_bitrate = json_object_get(session_root, "stream_h264_bitrate");
+      INFO("Delta - shadow state delta update: gateway_instance %s, stream_rtp_port %lld, stream_h264_bitrate %lld\n",
+           json_string_value(gateway_instance), json_integer_value(stream_rtp_port),
+           stream_h264_bitrate ? json_integer_value(stream_h264_bitrate) : 0);
+      int h264_bitrate = stream_h264_bitrate ? json_integer_value(stream_h264_bitrate) : 256;
+      const char *rtp_host = json_string_value(gateway_instance);
+      int rtp_port = json_integer_value(stream_rtp_port);
+
+      char bitrate_arg[100];
+      snprintf(bitrate_arg, sizeof(bitrate_arg), "bitrate=%d", h264_bitrate);
+      char rtp_host_arg[100];
+      snprintf(rtp_host_arg, sizeof(rtp_host_arg), "host=%s", rtp_host);
+      char rtp_port_arg[100];
+      snprintf(rtp_port_arg, sizeof(rtp_port_arg), "port=%d", rtp_port);
+      const char *argv[] = {"gst-launch-1.0", "-e", "videotestsrc", "!", "timeoverlay", "!", "x264enc", bitrate_arg,
+                            "!", "video/x-h264,profile=baseline", "!", "rtph264pay", "config-interval=1", "pt=96",
+                            "!", "udpsink", rtp_host_arg, rtp_port_arg, NULL};
+      if (gstreamer_pid != 0) {
+        INFO("Killing gstreamer process (pid %d)", gstreamer_pid);
+        kill(gstreamer_pid, SIGTERM);
+      }
+      if (0 == (gstreamer_pid = fork())) {
+        if (-1 == execvpe(argv[0], (char **)argv, NULL)) {
+          ERROR("Gstreamer execve failed [%m]");
+        }
+        exit(0);
+      }
+      INFO("Running gstreamer pid %d", gstreamer_pid);
+      free(prev_streams_json);
+      prev_streams_json = json_str_copy;
     }
 
     // release json object
