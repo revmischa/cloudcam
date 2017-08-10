@@ -21,8 +21,8 @@ def thing_exists_p(thing_name):
 
 
 def handler(event, context):
-    logger.info(json.dumps(event, sort_keys=True, indent=4))
-
+    """List things the current Cognito identity has access to"""
+    # cognito identity id is passed via lambda context
     identity_id = context.identity.cognito_identity_id
     logger.info(f'identityId: {identity_id}')
 

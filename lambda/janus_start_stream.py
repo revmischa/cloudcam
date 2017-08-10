@@ -23,6 +23,8 @@ iot_data = boto3.client('iot-data')
 
 
 def get_janus_instances():
+    """Returns a list of Janus instances available for stream allocation"""
+    # AWS EC2/ECS
     ec2_instance_ids = []
     cluster_arns = ecs.list_clusters()['clusterArns']
     for cluster_arn in cluster_arns:
@@ -54,6 +56,7 @@ def rand_string(size=12, chars=string.ascii_uppercase + string.ascii_uppercase +
 
 
 def janus_create_session(s, url):
+    """Creates a session via Janus REST API"""
     response = s.post(url, data=json.dumps({'janus': 'create', 'transaction': rand_string()}),
                       verify=janus_verify_https, timeout=janus_connect_timeout).json()
     if response['janus'] != 'success':
@@ -62,6 +65,7 @@ def janus_create_session(s, url):
 
 
 def janus_attach_plugin(s, session_url, plugin):
+    """Attaches a plugin to an existing session via Janus REST API"""
     response = s.post(session_url, data=json.dumps({'janus': 'attach',
                                                     'plugin': plugin,
                                                     'transaction': rand_string()}),
@@ -72,6 +76,7 @@ def janus_attach_plugin(s, session_url, plugin):
 
 
 def janus_send_plugin_message(s, plugin_url, body):
+    """Sends a message to plugin attached to an existing session via Janus REST API"""
     response = s.post(plugin_url, data=json.dumps({'janus': 'message',
                                                    'body': body,
                                                    'transaction': rand_string()}),
@@ -82,17 +87,22 @@ def janus_send_plugin_message(s, plugin_url, body):
 
 
 def janus_allocate_stream(janus_gateway_dns_name, stream):
+    """Allocates a RTP input stream on a specified Janus instance via Janus REST API"""
     janus_rest_url = f'https://{janus_gateway_dns_name}:8089/janus'
     logger.info(janus_rest_url)
 
+    # use a requests session so https connection persists across requests
     s = requests.Session()
 
+    # create Janus session
     session_url = janus_create_session(s, janus_rest_url)
     logger.info(session_url)
 
+    # attach streaming plugin to the session
     streaming_plugin_url = janus_attach_plugin(s, session_url, 'janus.plugin.streaming')
     logger.info(streaming_plugin_url)
 
+    # list existing streams
     streams = janus_send_plugin_message(s, streaming_plugin_url, {'request': 'list'})['list']
     logger.info(streams)
 
@@ -102,7 +112,7 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
     stream_secret = None
     stream_pin = None
 
-    # check if our stream is already allocated
+    # check if there's a stream already allocated (this data is stored in the iot thing shadow)
     if stream and stream['stream_name']:
         for st in streams:
             if st.get('id') == stream['stream_id'] and st.get('description') == stream['stream_name']:
@@ -112,7 +122,7 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
                 stream_secret = stream['stream_secret']
                 stream_pin = stream['stream_pin']
 
-    # otherwise, allocate new RTP port/stream name/secret/pin
+    # otherwise, find a free port pair for RTP input and create the stream
     if not (rtp_port or stream_id or stream_name or stream_secret or stream_pin):
         used_rtp_ports = set([o['id'] for o in streams])
         rtp_port = None
@@ -131,6 +141,7 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
 
         logger.info(f'allocated RTP port {rtp_port} for stream {stream_name}')
 
+        # this creates the stream via a messagee to Janus streaming plugin
         data = janus_send_plugin_message(s, streaming_plugin_url,
                                          {'request': 'create',
                                           'type': 'rtp',
@@ -163,23 +174,27 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
             'stream_secret': stream_secret,
             'stream_pin': stream_pin,
             'stream_rtp_port': rtp_port,
-            'stream_h264_bitrate': 256,
+            'stream_h264_bitrate': 256,     # todo: make bitrate adjustable
             'stream_enable': True,
             'timestamp': int(time())}
 
 
 def handler(event, context):
+    """Creates/starts a RTP stream from the thing"""
     logger.info(json.dumps(event, sort_keys=True, indent=4))
 
+    # lambda parameters
     thing_name = event['thingName']
-
     logger.info(thing_name)
 
+    # retrieve iot thing shadow document
     thing_shadow = json.loads(iot_data.get_thing_shadow(thingName=thing_name)['payload'].read().decode('utf-8'))
     logger.info(json.dumps(thing_shadow, indent=2))
 
+    # retrieve currently allocated stream info
     streams = thing_shadow['state']['desired'].get('streams') or {}
 
+    # get a list of available Janus instances
     janus_instances = get_janus_instances()
     for instance in janus_instances:
         instance_id = instance['InstanceId']
@@ -188,6 +203,7 @@ def handler(event, context):
         public_dns_name = instance['PublicDnsName']
         logger.info(f'janus container instance {instance_id} {instance_type} {private_dns_name} {public_dns_name}')
 
+    # allocate primary/standby Janus instances
     primary_gateway = random.choice(janus_instances)
     primary_gateway_dns_name = primary_gateway["PublicDnsName"]
 
@@ -202,6 +218,7 @@ def handler(event, context):
                                                                         streams.get('standby'))
     current_stream = streams.get('current', 'primary')
 
+    # update iot thing shadow with new stream data
     iot_data.update_thing_shadow(
         thingName=thing_name,
         payload=json.dumps({'state': {

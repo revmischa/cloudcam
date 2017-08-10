@@ -2,10 +2,7 @@ import store from '../store'
 
 var AWS = window.AWS
 
-/**
- * utilities to do sigv4
- * @class SigV4Utils
- */
+// AWS URL signing utils
 function SigV4Utils() {
 }
 
@@ -46,11 +43,11 @@ SigV4Utils.getSignedUrl = function (host, region, credentials) {
     canonicalQuerystring += '&X-Amz-Security-Token=' + encodeURIComponent(credentials.sessionToken);
   }
 
-  let requestUrl = protocol + '://' + host + uri + '?' + canonicalQuerystring;
-  return requestUrl;
+  return protocol + '://' + host + uri + '?' + canonicalQuerystring;
 };
 
-var mqttClient = null;
+// Paho MQTT client support
+let mqttClient = null;
 
 export function isMqttConnected() {
   return mqttClient.isConnected();
@@ -98,12 +95,14 @@ export function mqttConnect() {
   });
 }
 
+// request new thumbnails every 10s
 export function requestThumbsProcess() {
   clearTimeout(requestThumbsProcess);
   requestThumbs(Object.keys(store.getState().iot.things));
   setTimeout(requestThumbsProcess, 10000);
 }
 
+// subscibe to mqtt topics where thing shadow updates are published
 export function subscribeToShadowUpdates(thingName) {
   return new Promise((resolve, reject) => {
     mqttClient.subscribe("$aws/things/" + thingName + "/shadow/update/accepted", {
@@ -119,7 +118,9 @@ export function subscribeToShadowUpdates(thingName) {
   });
 }
 
+// called when iot thing shadow is updated
 function shadowUpdateHandler(thingName, doc) {
+  // if thing uploaded a new thumbnail to S3, get the download url and dispatch redux update for it
   if (doc.state.reported &&
     doc.state.reported.thumb_upload &&
     doc.state.reported.thumb_upload.status === "success") {
@@ -130,7 +131,7 @@ function shadowUpdateHandler(thingName, doc) {
   }
 }
 
-// doc format:
+// iot thing shadow document format:
 // {
 //   "state": {
 //     "desired": {
@@ -139,12 +140,14 @@ function shadowUpdateHandler(thingName, doc) {
 //   }
 // }
 
+// updates the specified thing shadow
 function updateShadow(thingName, doc) {
   let message = new Paho.MQTT.Message(JSON.stringify(doc));
   message.destinationName = "$aws/things/" + thingName + "/shadow/update";
   mqttClient.send(message);
 }
 
+// takes over a specified thing
 export function attachThingPolicy(thingName) {
   return new Promise((resolve, reject) => {
     console.log('invoking iot_attach_thing_policy:');
@@ -168,6 +171,7 @@ export function attachThingPolicy(thingName) {
   });
 }
 
+// provisions a new thing
 export function provisionThing(thingName) {
   return new Promise((resolve, reject) => {
     console.log('invoking iot_provision_thing:');
@@ -192,6 +196,7 @@ export function provisionThing(thingName) {
   });
 }
 
+// getsa a list of things current Cognito identity has access to
 export function refreshThings() {
   return new Promise((resolve, reject) => {
     console.log('invoking iot_list_things:');
@@ -233,6 +238,7 @@ export function refreshThings() {
   });
 }
 
+// requests new thumbnails from the specified things (upload notification will be received separately via MQTT thing shadow update)
 export function requestThumbs(thingNames) {
   return new Promise((resolve, reject) => {
     console.log('invoking request_thumb: ' + thingNames);
@@ -256,6 +262,7 @@ export function requestThumbs(thingNames) {
   })
 }
 
+// starts webrtc streaming from the specified thing
 export function startStreaming(thingName) {
   return new Promise((resolve, reject) => {
     console.log('startStreaming: ' + thingName);
@@ -263,6 +270,7 @@ export function startStreaming(thingName) {
     if (!Janus.isWebrtcSupported()) {
       reject("No WebRTC support... ");
     }
+    // allocate primary/standby streams on the Janus gateways via lambda function
     let params = {
       FunctionName: "janus_start_stream",
       Payload: JSON.stringify({
@@ -278,6 +286,7 @@ export function startStreaming(thingName) {
       }
       else {
         console.log(data);
+        // setup the webrtc connection
         let result = JSON.parse(data.Payload);
         let primary = result.primary;
         let standby = result.standby;
@@ -375,6 +384,7 @@ export function startStreaming(thingName) {
   })
 }
 
+// stops webrtc streaming for the specified thing
 export function stopStreaming(thingName) {
   return new Promise((resolve, reject) => {
     console.log('stopStreaming: ' + thingName);
@@ -406,6 +416,7 @@ export function stopStreaming(thingName) {
 export function reducer(state = {things: {}}, action) {
   let newState;
   switch (action.type) {
+    // update thing list
     case 'iot/things':
       newState = JSON.parse(JSON.stringify(state));
       newState.things = action.thingNames.reduce((o, name) => {
@@ -414,22 +425,26 @@ export function reducer(state = {things: {}}, action) {
       }, {});
       console.log("iot/things new state: " + JSON.stringify(newState));
       return newState;
+    // start thing webrtc stream
     case 'iot/startStreaming':
       newState = JSON.parse(JSON.stringify(state));
       newState.things[action.thingName].isStreaming = true;
       newState.things[action.thingName].stopStreamFn = action.stopStreamFn;
       console.log("iot/startStreaming new state: " + JSON.stringify(newState));
       return newState;
+    // stop thing webrtc stream
     case 'iot/stopStreaming':
       newState = JSON.parse(JSON.stringify(state));
       newState.things[action.thingName].isStreaming = false;
       console.log("iot/stopStreaming new state: " + JSON.stringify(newState));
       return newState;
+    // update current thing thumbnail image
     case 'iot/thumb':
       newState = JSON.parse(JSON.stringify(state));
       newState.things[action.thingName] = Object.assign({}, newState.things[action.thingName], {thumbUrl: action.thumbUrl});
       console.log("iot/thumb new state: " + JSON.stringify(newState));
       return newState;
+    // provision a new thing
     case 'iot/provision':
       newState = JSON.parse(JSON.stringify(state));
       newState.thingConfig = action.thingConfig;

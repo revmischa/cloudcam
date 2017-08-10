@@ -45,13 +45,15 @@ hnacRHr2lVz2XTIIM6RUthg/aFzyQkqFOFSDX9HoLPKsEdao7WNq
 
 
 def handler(event, context):
-    logger.info(json.dumps(event, sort_keys=True, indent=4))
-
+    """Provisions a new thing under the specified Cognito identity"""
     iot_endpoint = iot.describe_endpoint()
     region = iot_endpoint['endpointAddress'].split('.')[2]
     account_id = sts.get_caller_identity()['Account']
 
+    # cognito identity id is passed via lambda context
     identity_id = context.identity.cognito_identity_id
+
+    # lambda parameters
     thing_name = event['thingName']
     thing_type_name = event.get('thingTypeName', default_thing_type_name)
     client_id = event.get('clientId', thing_name)  # by default clientId and thingName are the same
@@ -68,6 +70,7 @@ def handler(event, context):
     if not client_id:
         raise Exception("clientId or thingName must be specified")
 
+    # create iot thing
     iot.create_thing(
         thingName=thing_name,
         thingTypeName=thing_type_name,
@@ -78,13 +81,14 @@ def handler(event, context):
         }
     )
 
+    # provision iot keys/certs
     keys_and_cert = iot.create_keys_and_certificate(setAsActive=True)
 
     certificate_id = keys_and_cert['certificateId']
     certificate_arn = keys_and_cert['certificateArn']
 
-    # certificate policy -- makes sure that only the client using specified client_id and
-    # thing_name could connect using this certificate
+    # create certificate policy -- makes sure that only the client using
+    # specified client_id and thing_name could connect using this certificate
     certificate_policy_name = f"{certificate_id}-{thing_name}"
     certificate_policy = {
         "Version": "2012-10-17",
@@ -172,6 +176,8 @@ def handler(event, context):
                                          policyDocument=json.dumps(identity_policy))
     iot.attach_principal_policy(policyName=identity_policy_name, principal=identity_id)
 
+    # create thing config (which will be encoded as a single json file
+    # containing all the required config data for the C client/thing)
     thing_config = {
         "thingName": thing_name,
         "thingTypeName": thing_type_name,

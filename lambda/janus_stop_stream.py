@@ -11,21 +11,25 @@ iot_data = boto3.client('iot-data')
 
 
 def handler(event, context):
+    """Stop a RTP stream from the thing"""
     logger.info(json.dumps(event, sort_keys=True, indent=4))
 
+    # lambda parameters
     thing_name = event['thingName']
-
     logger.info(thing_name)
 
+    # retrieve iot thing shadow document
     thing_shadow = json.loads(iot_data.get_thing_shadow(thingName=thing_name)['payload'].read().decode('utf-8'))
     logger.info(json.dumps(thing_shadow, indent=2))
 
+    # retrieve currently allocated stream info
     streams = thing_shadow['state']['desired'].get('streams')
     logger.info(f'Currently allocated streams: {streams}')
 
     # todo: client refcounting so camera could stop streaming if there are no clients
     # streams['current'] = None
 
+    # update iot thing shadow with new stream data
     iot_data.update_thing_shadow(
         thingName=thing_name,
         payload=json.dumps({'state': {
