@@ -29,7 +29,6 @@ def get_lightsail_public_dns_name(instance):
 
 def translate_lightsail_instance(instance):
     return {'instance_id': instance['name'],
-            'InstanceType': instance['bundleId'],
             'public_dns_name': get_lightsail_public_dns_name(instance)}
 
 
