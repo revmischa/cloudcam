@@ -1,8 +1,9 @@
 import json
 import logging
 import random
-import string
 from time import time
+import os
+from cloudcam.tools import rand_string
 
 import boto3
 import requests
@@ -10,49 +11,33 @@ import requests
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-cluster_name_prefix = 'cloudcamdev-janus-ecs'
 janus_verify_https = False
 janus_connect_timeout = 5
-janus_rtp_port_range = range(20000, 20046, 2)
+janus_rtp_port_range = range(20000, 21000, 2)
+janus_hosted_zone_domain = os.environ['JANUS_HOSTED_ZONE_DOMAIN']
+janus_instance_name_prefix = os.environ['JANUS_INSTANCE_NAME_PREFIX']
 
-ecs = boto3.client('ecs')
-ec2 = boto3.client('ec2')
+lightsail = boto3.client('lightsail')
 
 iot = boto3.client('iot')
 iot_data = boto3.client('iot-data')
 
 
+def get_lightsail_public_dns_name(instance):
+    return f'{instance["name"]}.{janus_hosted_zone_domain}'
+
+
+def translate_lightsail_instance(instance):
+    return {'instance_id': instance['name'],
+            'InstanceType': instance['bundleId'],
+            'public_dns_name': get_lightsail_public_dns_name(instance)}
+
+
 def get_janus_instances():
-    """Returns a list of Janus instances available for stream allocation"""
-    # AWS EC2/ECS
-    ec2_instance_ids = []
-    cluster_arns = ecs.list_clusters()['clusterArns']
-    for cluster_arn in cluster_arns:
-        logger.info(cluster_arn.split(':'))
-        logger.info(cluster_arn.split(':')[-1])
-        if cluster_arn.split(':')[-1].startswith('cluster/' + cluster_name_prefix):
-            logger.info(f'janus cluster arn: {cluster_arn}')
-            container_instance_arns = ecs.list_container_instances(
-                cluster=cluster_arn,
-                status='ACTIVE')['containerInstanceArns']
-            logger.info(f'janus container instance arns: {container_instance_arns}')
-            container_instances = ecs.describe_container_instances(
-                cluster=cluster_arn,
-                containerInstances=container_instance_arns)['containerInstances']
-            logger.info(f'janus container instances: {container_instances}')
-            for container_instance in container_instances:
-                ec2_instance_ids.append(container_instance['ec2InstanceId'])
-    ec2_instance_info = ec2.describe_instances(InstanceIds=ec2_instance_ids)
-    janus_ec2_instances = []
-    for reservation in ec2_instance_info['Reservations']:
-        for instance in reservation['Instances']:
-            if instance['State']['Name'] == 'running':
-                janus_ec2_instances.append(instance)
-    return janus_ec2_instances
-
-
-def rand_string(size=12, chars=string.ascii_uppercase + string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for _ in range(size))
+    """Returns a list of Janus instances available for stream allocation (AWS Lightsail)"""
+    return list(map(translate_lightsail_instance,
+                    filter(lambda instance: instance['name'].startswith(janus_instance_name_prefix),
+                           lightsail.get_instances()['instances'])))
 
 
 def janus_create_session(s, url):
@@ -174,7 +159,7 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
             'stream_secret': stream_secret,
             'stream_pin': stream_pin,
             'stream_rtp_port': rtp_port,
-            'stream_h264_bitrate': 256,     # todo: make bitrate adjustable
+            'stream_h264_bitrate': 256,  # todo: make bitrate adjustable
             'stream_enable': True,
             'timestamp': int(time())}
 
@@ -197,18 +182,16 @@ def handler(event, context):
     # get a list of available Janus instances
     janus_instances = get_janus_instances()
     for instance in janus_instances:
-        instance_id = instance['InstanceId']
-        instance_type = instance['InstanceType']
-        private_dns_name = instance['PrivateDnsName']
-        public_dns_name = instance['PublicDnsName']
-        logger.info(f'janus container instance {instance_id} {instance_type} {private_dns_name} {public_dns_name}')
+        instance_id = instance['instance_id']
+        public_dns_name = instance['public_dns_name']
+        logger.info(f'janus container instance {instance_id} {public_dns_name}')
 
     # allocate primary/standby Janus instances
     primary_gateway = random.choice(janus_instances)
-    primary_gateway_dns_name = primary_gateway["PublicDnsName"]
+    primary_gateway_dns_name = primary_gateway["public_dns_name"]
 
     standby_janus_instances = janus_instances[:].remove(primary_gateway)
-    standby_gateway_dns_name = standby_janus_instances and random.choice(standby_janus_instances)["PublicDnsName"]
+    standby_gateway_dns_name = standby_janus_instances and random.choice(standby_janus_instances)['public_dns_name']
 
     logger.info(f'gateway: {primary_gateway_dns_name}, standby gateway: {standby_gateway_dns_name}')
 

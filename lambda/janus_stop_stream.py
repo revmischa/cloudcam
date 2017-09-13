@@ -27,6 +27,10 @@ def handler(event, context):
     logger.info(f'Currently allocated streams: {streams}')
 
     # todo: client refcounting so camera could stop streaming if there are no clients
+    # to do that we need a globally consistent data store (iot shadows aren't (?))
+    # or we leave session management to the thing itself:
+    # send messages to it when adding new or removing dead sessions, have the thing maintain a consistent list and
+    # start/stop streaming depending on the list size
     # streams['current'] = None
 
     # update iot thing shadow with new stream data
