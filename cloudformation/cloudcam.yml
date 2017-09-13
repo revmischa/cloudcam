@@ -481,6 +481,7 @@ Resources:
                   - 'lightsail:DeleteInstance'
                   - 'lightsail:OpenInstancePublicPorts'
                   - 'route53:ChangeResourceRecordSets'
+                  - 'kms:Decrypt'
                 Resource: '*'
               - Effect: Allow
                 Action:
@@ -504,6 +505,50 @@ Resources:
           JANUS_HOSTED_ZONE_ID: !Ref JanusHostedZoneId
           JANUS_HOSTED_ZONE_DOMAIN: !Ref JanusHostedZoneDomain
           JANUS_INSTANCE_NAME_PREFIX: !Ref JanusInstanceNamePrefix
+  JanusKmsKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Enabled: true
+      EnableKeyRotation: false
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: 'janus-kms'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - "kms:*"
+            Resource: '*'
+          - Effect: 'Allow'
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:user/cloudcam-ops'
+            Action:
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+            Resource: '*'
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "kms:Decrypt"
+            Resource: '*'
+  JanusKmsKeyAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: "alias/janus"
+      TargetKeyId: !Ref JanusKmsKey
 
 Parameters:
   UiBucketName:

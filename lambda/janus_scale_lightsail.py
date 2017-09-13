@@ -4,6 +4,7 @@ import os
 import random
 import time
 import boto3
+import base64
 from cloudcam.tools import rand_string
 
 logger = logging.getLogger()
@@ -17,7 +18,65 @@ janus_hosted_zone_id = os.environ['JANUS_HOSTED_ZONE_ID']
 janus_hosted_zone_domain = os.environ['JANUS_HOSTED_ZONE_DOMAIN']
 janus_instance_name_prefix = os.environ['JANUS_INSTANCE_NAME_PREFIX']
 
-lightsail_init_script = """
+# Janus SSL cert data
+janus_ssl_cert_pem = """-----BEGIN CERTIFICATE-----
+MIIG2jCCBcKgAwIBAgIMBGVh/DUTLawsXJ24MA0GCSqGSIb3DQEBCwUAMEwxCzAJ
+BgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMSIwIAYDVQQDExlB
+bHBoYVNTTCBDQSAtIFNIQTI1NiAtIEcyMB4XDTE3MDkxMzEyMjczMFoXDTE4MDkx
+NDEyMjczMFowPjEhMB8GA1UECxMYRG9tYWluIENvbnRyb2wgVmFsaWRhdGVkMRkw
+FwYDVQQDDBAqLmNsb3VkY2FtLnNwYWNlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+MIIBCgKCAQEA7Yc26Af305J+MSPQ4El0Rn6ZV8H4y1E1c9DenKwTp+Gb/FbTZC0J
+ztY04Tz1cJIasZwie6CVL47jQFHmEL3KBWAahTRwT8atjl40SKWWIugdoLpxb2d+
+s6HV1JA3G3aGSBIPzJy41lJF4uLTPYSJNVr3qZjzQ656FCiwSCc9IpvbsSYsl7Oh
+UgYfTj/pDSwwnNb+0FoAMd4v3rHsZa6sdw3bUDqHUHedXXctgQlT+mJUHrA5LWOl
+G25sfImdC7S0EKiWq7XkbhuitlCH4tZsYACIUbHAtjKLpjh5tmF4CNnEPx1dUxQs
+VnOB921gd1Cu1n5jHU4GzjcLmQAQCvev7wIDAQABo4IDyDCCA8QwDgYDVR0PAQH/
+BAQDAgWgMIGJBggrBgEFBQcBAQR9MHswQgYIKwYBBQUHMAKGNmh0dHA6Ly9zZWN1
+cmUyLmFscGhhc3NsLmNvbS9jYWNlcnQvZ3NhbHBoYXNoYTJnMnIxLmNydDA1Bggr
+BgEFBQcwAYYpaHR0cDovL29jc3AyLmdsb2JhbHNpZ24uY29tL2dzYWxwaGFzaGEy
+ZzIwVwYDVR0gBFAwTjBCBgorBgEEAaAyAQoKMDQwMgYIKwYBBQUHAgEWJmh0dHBz
+Oi8vd3d3Lmdsb2JhbHNpZ24uY29tL3JlcG9zaXRvcnkvMAgGBmeBDAECATAJBgNV
+HRMEAjAAMD4GA1UdHwQ3MDUwM6AxoC+GLWh0dHA6Ly9jcmwyLmFscGhhc3NsLmNv
+bS9ncy9nc2FscGhhc2hhMmcyLmNybDArBgNVHREEJDAighAqLmNsb3VkY2FtLnNw
+YWNlgg5jbG91ZGNhbS5zcGFjZTAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUH
+AwIwHQYDVR0OBBYEFBCC9S/Ti9HajS8ws8gfOxgixJYfMB8GA1UdIwQYMBaAFPXN
+1TwIUPlqTzq3l9pWg+Zp0mj3MIIB9AYKKwYBBAHWeQIEAgSCAeQEggHgAd4AdwC7
+2d+8H4pxtZOUI5eqkntHOFeVCqtS6BqQlmQ2jh7RhQAAAV57NW2bAAAEAwBIMEYC
+IQDiYv6g4vJf6pUA+vhKGnVPMBWhqfgw+fMJuh5sLWqB1wIhAP6btIpWFeB+s+Gu
+w9WDoFgZkts4Nn72NkTcbdlBA6SeAHUAVhQGmi/XwuzT9eG9RLI+x0Z2ubyZEVzA
+75SYVdaJ0N0AAAFeezVt3wAABAMARjBEAiADi2JrW0zfcZEUjRQzEq5LWAU0YOPa
+ZfMS7UCUUIp5tAIgNB0989nOxNHCgUvOV+iKQE6t1vOrfzxd+xK06erfEuMAdQCk
+uQmQtBhYFIe7E6LMZ3AKPDWYBPkb37jjd80OyA3cEAAAAV57NW18AAAEAwBGMEQC
+IBHUTcBV8RkRkc4/qJhd1nD8M7RNk6X+VyYrHDLkeQWtAiBINuW00OTPqQcRzdjQ
+0VY4P9EOPr79+JvHZ/TQzyoEpQB1AO5Lvbd1zmC64UJpH6vhnmajD35fsHLYgwDE
+e4l6qP3LAAABXns1cGMAAAQDAEYwRAIgVSE8Ux1Fk6thVZFjK1enGSIRoGpIjC3g
+SXD5zVMc3X4CIDeMkDafqTFLOB6fguxeJenfQsZw7kMJ43ZI5e3wGv4AMA0GCSqG
+SIb3DQEBCwUAA4IBAQCwLLAyLej5Larjx2Ugv0erUyFMjsuHgmcHiEiPmy3TC1KU
+ht4chUUNHecrS6/jXvudkvMHQyaWzjngKNO8KkBpHJBfhDlX2m+j3CoXJ+6x/t2l
+7TrcMlaufQfYOcPE1ax7xAa/8aQiYzkxAHT1osg1VjvGv/apTsezwxG8rjdzDfaz
+QQK0yellrvqPchjmTqE5GvfbotTdVAr6VgnLVzjnf1y0EMIYFhrBgJ0S26Iomlvx
++u13zrhp9mCqBypBse8BLsQZfFG6JU3M/FyzcmEOpeJ6+54GmmTgx6NsyzNc3oxJ
+qWsFLW3Ne89nnlgJUaatymaahs2nQ69ryqoKvXLf
+-----END CERTIFICATE-----
+"""
+
+# Janus SSL cert private key encrypted with the corresponding KMS key
+janus_kms_key_alias = "alias/janus"
+janus_encrypted_ssl_key_pem = """
+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
+"""
+
+lightsail = boto3.client('lightsail')
+route53 = boto3.client('route53')
+kms = boto3.client('kms')
+
+
+def get_lightsail_init_script():
+    # the more logical place to decrypt the SSL key would be the lightsail instance itself, however they somehow
+    # exist under a different aws account id, so kms key policy would need to be modified to allow that
+    janus_ssl_key_pem = kms.decrypt(CiphertextBlob=base64.b64decode(janus_encrypted_ssl_key_pem))['Plaintext'].decode(
+        "ascii")
+    return """
 yum update -y
 yum install -y docker
 mkdir /etc/docker
@@ -28,11 +87,16 @@ cat >/etc/docker/daemon.json << EOL
 EOL
 service docker start
 usermod -a -G docker ec2-user
-docker run -d --name docker-janus --restart=always -p 8080:8080 -p 8088:8088 -p 8089:8089 -p 7889:7889 -p 8188:8188 -p 10000-10200:10000-10200/udp -p 20000-21000:20000-21000/udp {0}
-""".format(lightsail_janus_image)
-
-lightsail = boto3.client('lightsail')
-route53 = boto3.client('route53')
+docker run -d --name docker-janus --restart=always -p 8080:8080 -p 8088:8088 -p 8089:8089 \
+    -p 7889:7889 -p 8188:8188 -p 10000-10200:10000-10200/udp -p 20000-21000:20000-21000/udp \
+    -e SSL_CERT_PEM="$(cat <<'EOF'
+{0}
+EOF
+)" -e SSL_KEY_PEM="$(cat <<'EOF'
+{1}
+EOF
+)" {2}
+""".format(janus_ssl_cert_pem, janus_ssl_key_pem, lightsail_janus_image)
 
 
 def get_janus_instances():
@@ -69,14 +133,13 @@ def create_janus_instance():
     # randomly select an availability zone if multiple ones are specified
     lightsail_az = random.choice(lightsail_azs)
     instance_name = f'{janus_instance_name_prefix}-{lightsail_az}-{rand_string(12)}'.lower()
-    logger.info(
-        f'Creating instance: {instance_name}, {lightsail_az}, {lightsail_blueprint_id}, {lightsail_bundle_id}, {lightsail_init_script}')
+    logger.info(f'Creating instance: {instance_name}, {lightsail_az}, {lightsail_blueprint_id}, {lightsail_bundle_id}')
     # create/start the instance (Janus docker container will be set up/started via lightsail_init_script)
     lightsail.create_instances(instanceNames=[instance_name],
                                availabilityZone=lightsail_az,
                                blueprintId=lightsail_blueprint_id,
                                bundleId=lightsail_bundle_id,
-                               userData=lightsail_init_script)
+                               userData=get_lightsail_init_script())
     # wait until the instance is running
     for i in range(120):
         time.sleep(1)
