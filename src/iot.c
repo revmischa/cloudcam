@@ -8,6 +8,7 @@
 #include "cloudcam/s3.h"
 #include "../config/aws_iot_config.h"
 
+// writes a string to the specified file, creating it if necessary
 IoT_Error_t spit(const char *path, const char *str) {
   FILE *f = fopen(path, "wb");
   if (f == NULL) {
@@ -35,7 +36,7 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   char config_path[PATH_MAX + 1];
   snprintf(config_path, sizeof(config_path), "%s/%s", dir, AWS_IOT_CONFIG_FILENAME);
 
-  // read the config file (produced by iot_provision_thing lambda)
+  // read the config file containing thing configuration and keys/certs (produced by iot_provision_thing lambda function)
   json_error_t json_error;
   json_t *config_root = json_load_file(config_path, 0, &json_error);
   if (config_root == NULL) {
@@ -121,16 +122,18 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   return SUCCESS;
 }
 
+// cloudcam_ctx pointer passed to shadow delta handlers
 // needs to be global since IoT SDK doesn't currently allow us to pass context to the shadow delta callback
 static cloudcam_ctx *delta_handler_ctx = NULL;
 
-// subscribe to topics we're interested in
+// subscribe to topics/shadow delta updates we're interested in
 IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx) {
   assert(ctx != NULL);
 
   assert(delta_handler_ctx == NULL || delta_handler_ctx == ctx);
   delta_handler_ctx = ctx;
 
+  // subscribe to thumb upload shadow deltas (thumb_upload key)
   static char thumb_upload_delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
   static jsonStruct_t thumb_upload_delta = {
     .cb = shadow_thumb_upload_delta_handler,
@@ -146,6 +149,7 @@ IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx) {
     INFO("Registered for thumb_upload shadow delta updates");
   }
 
+  // subscribe to a/v streams shadow deltas (streams key)
   static char streams_delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
   static jsonStruct_t streams_delta = {
     .cb = shadow_streams_delta_handler,
@@ -195,6 +199,7 @@ void shadow_update_callback(const char *pThingName, ShadowActions_t action, Shad
   INFO("shadow_update_callback(%s, %d, %d): received %s\n", pThingName, action, status, pReceivedJsonDocument);
 }
 
+// downloads an url to a specified file (via curl)
 IoT_Error_t download_file(const char *url, const char *path) {
   CURL *curl = curl_easy_init();
   assert(curl != NULL);
@@ -218,7 +223,7 @@ IoT_Error_t download_file(const char *url, const char *path) {
   return SUCCESS;
 }
 
-// called when device shadow changes with info about what changed
+// thumb upload delta handler (thumb_upload key)
 void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {
   cloudcam_ctx *ctx = delta_handler_ctx;
   assert(ctx != NULL);
@@ -277,9 +282,13 @@ void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_l
   }
 }
 
+// current gstreamer subprocess pid (a global since there could only be one)
 static pid_t gstreamer_pid = 0;
+
+// stream configuration for the currently running gstreamer subprocess so we don't have to restart it if nothing changed
 static char *prev_streams_json = NULL;
 
+// a/v streams delta handler (streams key)
 void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {
   cloudcam_ctx *ctx = delta_handler_ctx;
   assert(ctx != NULL);
@@ -287,6 +296,7 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
   INFO("shadow_streams_delta_handler");
   INFO("%.*s", json_str_len, json_str);
 
+  // check if stream configuration has changed
   char *json_str_copy = strndup(json_str, json_str_len);
   if (prev_streams_json && strcmp(prev_streams_json, json_str_copy) == 0) {
     free(json_str_copy);
@@ -301,6 +311,7 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
       ERROR("error: payload parsing error: %s at %s\n", json_error.text, json_error.source);
       return;
     }
+    // if there is no current stream configured, stop the gstreamer
     json_t *current = json_object_get(root, "current");
     if (!current || json_is_null(current)) {
       if (gstreamer_pid != 0) {
@@ -309,6 +320,7 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
         gstreamer_pid = 0;
       }
     } else {
+      // parse the stream configuration
       json_t *session_root = NULL;
       if (json_is_string(current) && strcmp("primary", json_string_value(current)) == 0) {
         session_root = json_object_get(root, "primary");
@@ -336,6 +348,7 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
       const char *rtp_host = json_string_value(gateway_instance);
       int rtp_port = json_integer_value(stream_rtp_port);
 
+      // format gstreamer command-line arguments based on the stream configuration
       char bitrate_arg[100];
       snprintf(bitrate_arg, sizeof(bitrate_arg), "bitrate=%d", h264_bitrate);
       char rtp_host_arg[100];
@@ -345,10 +358,12 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
       const char *argv[] = {"gst-launch-1.0", "-e", "videotestsrc", "!", "timeoverlay", "!", "x264enc", bitrate_arg,
                             "!", "video/x-h264,profile=baseline", "!", "rtph264pay", "config-interval=1", "pt=96",
                             "!", "udpsink", rtp_host_arg, rtp_port_arg, NULL};
+      // if there's already a gstreamer running, kill it
       if (gstreamer_pid != 0) {
         INFO("Killing gstreamer process (pid %d)", gstreamer_pid);
         kill(gstreamer_pid, SIGTERM);
       }
+      // and then run the new one
       if (0 == (gstreamer_pid = fork())) {
         if (-1 == execvpe(argv[0], (char **)argv, NULL)) {
           ERROR("Gstreamer execve failed [%m]");

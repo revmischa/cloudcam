@@ -348,7 +348,7 @@ Resources:
       AccessControl: PublicRead
       WebsiteConfiguration:
         IndexDocument: index.html
-      BucketName: !Sub '${AWS::StackName}-ui'
+      BucketName: !Ref UiBucketName
 
   JanusStartStreamLambdaRole:
     Type: 'AWS::IAM::Role'
@@ -381,10 +381,8 @@ Resources:
                   - 'iot:Connect'
                   - 'iot:GetThingShadow'
                   - 'iot:UpdateThingShadow'
-                  - 'ecs:ListClusters'
-                  - 'ecs:ListContainerInstances'
-                  - 'ecs:DescribeContainerInstances'
-                  - 'ec2:DescribeInstances'
+                  - 'lightsail:GetInstance'
+                  - 'lightsail:GetInstances'
                 Resource: '*'
               - Effect: Allow
                 Action:
@@ -399,6 +397,10 @@ Resources:
       Handler: janus_start_stream.handler
       Timeout: 10
       Code: ../lambda
+      Environment:
+        Variables:
+          JANUS_HOSTED_ZONE_DOMAIN: !Ref JanusHostedZoneDomain
+          JANUS_INSTANCE_NAME_PREFIX: !Ref JanusInstanceNamePrefix
 
   JanusStopStreamLambdaRole:
     Type: 'AWS::IAM::Role'
@@ -431,10 +433,6 @@ Resources:
                   - 'iot:Connect'
                   - 'iot:GetThingShadow'
                   - 'iot:UpdateThingShadow'
-                  - 'ecs:ListClusters'
-                  - 'ecs:ListContainerInstances'
-                  - 'ecs:DescribeContainerInstances'
-                  - 'ec2:DescribeInstances'
                 Resource: '*'
               - Effect: Allow
                 Action:
@@ -449,6 +447,150 @@ Resources:
       Handler: janus_stop_stream.handler
       Timeout: 10
       Code: ../lambda
+
+  JanusScaleLightsailLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-JanusScaleLightsailLambdaRole'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'sts:AssumeRole'
+                  - 'lightsail:GetInstance'
+                  - 'lightsail:GetInstances'
+                  - 'lightsail:CreateInstances'
+                  - 'lightsail:DeleteInstance'
+                  - 'lightsail:OpenInstancePublicPorts'
+                  - 'route53:ChangeResourceRecordSets'
+                  - 'kms:Decrypt'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'execute-api:Invoke'
+                Resource: '*'
+  JanusScaleLightsailLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt [JanusScaleLightsailLambdaRole, Arn]
+      FunctionName: 'janus_scale_lightsail'
+      Runtime: python3.6
+      Handler: janus_scale_lightsail.handler
+      Timeout: 300
+      Code: ../lambda
+      Environment:
+        Variables:
+          LIGHTSAIL_AZS: !Ref LightsailAzs
+          LIGHTSAIL_BLUEPRINT_ID: !Ref LightsailBlueprintId
+          LIGHTSAIL_BUNDLE_ID: !Ref LightsailBundleId
+          LIGHTSAIL_JANUS_IMAGE: !Ref LightsailJanusImage
+          JANUS_HOSTED_ZONE_ID: !Ref JanusHostedZoneId
+          JANUS_HOSTED_ZONE_DOMAIN: !Ref JanusHostedZoneDomain
+          JANUS_INSTANCE_NAME_PREFIX: !Ref JanusInstanceNamePrefix
+  JanusKmsKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Enabled: true
+      EnableKeyRotation: false
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: 'janus-kms'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - "kms:*"
+            Resource: '*'
+          - Effect: 'Allow'
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:user/cloudcam-ops'
+            Action:
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+            Resource: '*'
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "kms:Decrypt"
+            Resource: '*'
+  JanusKmsKeyAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: "alias/janus"
+      TargetKeyId: !Ref JanusKmsKey
+
+Parameters:
+  UiBucketName:
+    Type: String
+    Description: 'S3 UI bucket name. Must be the same as the UI domain name for CNAME redirect to work'
+    Default: 'beta.cloudcam.space'
+  JanusCertPem:
+    Type: String
+    Description: 'Janus gateway SSL cert PEM'
+    Default: ''
+  JanusCertKey:
+    Type: String
+    Description: 'Janus gateway SSL cert KEY'
+    Default: ''
+  LightsailAzs:
+    Type: String
+    Description: 'Lightsail Janus gateway instance availability zone'
+    Default: 'us-west-2a,us-west-2b,us-west-2c'
+  LightsailBlueprintId:
+    Type: String
+    Description: 'Lightsail Janus gateway instance blueprint (image) id'
+    Default: 'amazon_linux_2017_03_1_1'
+  LightsailBundleId:
+    Type: String
+    Description: 'Lightsail Janus gateway instance bundle (type) id'
+    Default: 'nano_1_0'
+  LightsailJanusImage:
+    Type: String
+    Description: 'Lightsail Janus gateway Docker image name'
+    Default: 'somebodyelse/docker-janus:latest'
+  JanusHostedZoneId:
+    Type: String
+    Description: 'AWS Hosted Zone Id where Janus instances will receive DNS names'
+    Default: 'Z1MUZ3ZP15MONF'
+  JanusHostedZoneDomain:
+    Type: String
+    Description: 'AWS Hosted Zone domain where Janus instances will receive DNS names'
+    Default: 'cloudcam.space'
+  JanusInstanceNamePrefix:
+    Type: String
+    Description: 'Janus instance/dns name prefix'
+    Default: 'ls-janus'
 
 Outputs:
   IdentityPoolId:

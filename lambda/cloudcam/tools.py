@@ -1,4 +1,6 @@
 import logging
+import string
+import random
 
 from botocore.exceptions import ClientError
 
@@ -32,4 +34,7 @@ def ignore_all(method, **kwargs):
     except ClientError as e:
         pass
 
+
+def rand_string(size=12, chars=string.ascii_uppercase + string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
 

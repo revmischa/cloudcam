@@ -1,8 +1,9 @@
 import json
 import logging
 import random
-import string
 from time import time
+import os
+from cloudcam.tools import rand_string
 
 import boto3
 import requests
@@ -10,50 +11,36 @@ import requests
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-cluster_name_prefix = 'cloudcamdev-janus-ecs'
 janus_verify_https = False
 janus_connect_timeout = 5
-janus_rtp_port_range = range(20000, 20046, 2)
+janus_rtp_port_range = range(20000, 21000, 2)
+janus_hosted_zone_domain = os.environ['JANUS_HOSTED_ZONE_DOMAIN']
+janus_instance_name_prefix = os.environ['JANUS_INSTANCE_NAME_PREFIX']
 
-ecs = boto3.client('ecs')
-ec2 = boto3.client('ec2')
+lightsail = boto3.client('lightsail')
 
 iot = boto3.client('iot')
 iot_data = boto3.client('iot-data')
 
 
+def get_lightsail_public_dns_name(instance):
+    return f'{instance["name"]}.{janus_hosted_zone_domain}'
+
+
+def translate_lightsail_instance(instance):
+    return {'instance_id': instance['name'],
+            'public_dns_name': get_lightsail_public_dns_name(instance)}
+
+
 def get_janus_instances():
-    ec2_instance_ids = []
-    cluster_arns = ecs.list_clusters()['clusterArns']
-    for cluster_arn in cluster_arns:
-        logger.info(cluster_arn.split(':'))
-        logger.info(cluster_arn.split(':')[-1])
-        if cluster_arn.split(':')[-1].startswith('cluster/' + cluster_name_prefix):
-            logger.info(f'janus cluster arn: {cluster_arn}')
-            container_instance_arns = ecs.list_container_instances(
-                cluster=cluster_arn,
-                status='ACTIVE')['containerInstanceArns']
-            logger.info(f'janus container instance arns: {container_instance_arns}')
-            container_instances = ecs.describe_container_instances(
-                cluster=cluster_arn,
-                containerInstances=container_instance_arns)['containerInstances']
-            logger.info(f'janus container instances: {container_instances}')
-            for container_instance in container_instances:
-                ec2_instance_ids.append(container_instance['ec2InstanceId'])
-    ec2_instance_info = ec2.describe_instances(InstanceIds=ec2_instance_ids)
-    janus_ec2_instances = []
-    for reservation in ec2_instance_info['Reservations']:
-        for instance in reservation['Instances']:
-            if instance['State']['Name'] == 'running':
-                janus_ec2_instances.append(instance)
-    return janus_ec2_instances
-
-
-def rand_string(size=12, chars=string.ascii_uppercase + string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for _ in range(size))
+    """Returns a list of Janus instances available for stream allocation (AWS Lightsail)"""
+    return list(map(translate_lightsail_instance,
+                    filter(lambda instance: instance['name'].startswith(janus_instance_name_prefix),
+                           lightsail.get_instances()['instances'])))
 
 
 def janus_create_session(s, url):
+    """Creates a session via Janus REST API"""
     response = s.post(url, data=json.dumps({'janus': 'create', 'transaction': rand_string()}),
                       verify=janus_verify_https, timeout=janus_connect_timeout).json()
     if response['janus'] != 'success':
@@ -62,6 +49,7 @@ def janus_create_session(s, url):
 
 
 def janus_attach_plugin(s, session_url, plugin):
+    """Attaches a plugin to an existing session via Janus REST API"""
     response = s.post(session_url, data=json.dumps({'janus': 'attach',
                                                     'plugin': plugin,
                                                     'transaction': rand_string()}),
@@ -72,6 +60,7 @@ def janus_attach_plugin(s, session_url, plugin):
 
 
 def janus_send_plugin_message(s, plugin_url, body):
+    """Sends a message to plugin attached to an existing session via Janus REST API"""
     response = s.post(plugin_url, data=json.dumps({'janus': 'message',
                                                    'body': body,
                                                    'transaction': rand_string()}),
@@ -82,17 +71,22 @@ def janus_send_plugin_message(s, plugin_url, body):
 
 
 def janus_allocate_stream(janus_gateway_dns_name, stream):
+    """Allocates a RTP input stream on a specified Janus instance via Janus REST API"""
     janus_rest_url = f'https://{janus_gateway_dns_name}:8089/janus'
     logger.info(janus_rest_url)
 
+    # use a requests session so https connection persists across requests
     s = requests.Session()
 
+    # create Janus session
     session_url = janus_create_session(s, janus_rest_url)
     logger.info(session_url)
 
+    # attach streaming plugin to the session
     streaming_plugin_url = janus_attach_plugin(s, session_url, 'janus.plugin.streaming')
     logger.info(streaming_plugin_url)
 
+    # list existing streams
     streams = janus_send_plugin_message(s, streaming_plugin_url, {'request': 'list'})['list']
     logger.info(streams)
 
@@ -102,7 +96,7 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
     stream_secret = None
     stream_pin = None
 
-    # check if our stream is already allocated
+    # check if there's a stream already allocated (this data is stored in the iot thing shadow)
     if stream and stream['stream_name']:
         for st in streams:
             if st.get('id') == stream['stream_id'] and st.get('description') == stream['stream_name']:
@@ -112,7 +106,7 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
                 stream_secret = stream['stream_secret']
                 stream_pin = stream['stream_pin']
 
-    # otherwise, allocate new RTP port/stream name/secret/pin
+    # otherwise, find a free port pair for RTP input and create the stream
     if not (rtp_port or stream_id or stream_name or stream_secret or stream_pin):
         used_rtp_ports = set([o['id'] for o in streams])
         rtp_port = None
@@ -131,6 +125,7 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
 
         logger.info(f'allocated RTP port {rtp_port} for stream {stream_name}')
 
+        # this creates the stream via a messagee to Janus streaming plugin
         data = janus_send_plugin_message(s, streaming_plugin_url,
                                          {'request': 'create',
                                           'type': 'rtp',
@@ -163,36 +158,39 @@ def janus_allocate_stream(janus_gateway_dns_name, stream):
             'stream_secret': stream_secret,
             'stream_pin': stream_pin,
             'stream_rtp_port': rtp_port,
-            'stream_h264_bitrate': 256,
+            'stream_h264_bitrate': 256,  # todo: make bitrate adjustable
             'stream_enable': True,
             'timestamp': int(time())}
 
 
 def handler(event, context):
+    """Creates/starts a RTP stream from the thing"""
     logger.info(json.dumps(event, sort_keys=True, indent=4))
 
+    # lambda parameters
     thing_name = event['thingName']
-
     logger.info(thing_name)
 
+    # retrieve iot thing shadow document
     thing_shadow = json.loads(iot_data.get_thing_shadow(thingName=thing_name)['payload'].read().decode('utf-8'))
     logger.info(json.dumps(thing_shadow, indent=2))
 
+    # retrieve currently allocated stream info
     streams = thing_shadow['state']['desired'].get('streams') or {}
 
+    # get a list of available Janus instances
     janus_instances = get_janus_instances()
     for instance in janus_instances:
-        instance_id = instance['InstanceId']
-        instance_type = instance['InstanceType']
-        private_dns_name = instance['PrivateDnsName']
-        public_dns_name = instance['PublicDnsName']
-        logger.info(f'janus container instance {instance_id} {instance_type} {private_dns_name} {public_dns_name}')
+        instance_id = instance['instance_id']
+        public_dns_name = instance['public_dns_name']
+        logger.info(f'janus container instance {instance_id} {public_dns_name}')
 
+    # allocate primary/standby Janus instances
     primary_gateway = random.choice(janus_instances)
-    primary_gateway_dns_name = primary_gateway["PublicDnsName"]
+    primary_gateway_dns_name = primary_gateway["public_dns_name"]
 
     standby_janus_instances = janus_instances[:].remove(primary_gateway)
-    standby_gateway_dns_name = standby_janus_instances and random.choice(standby_janus_instances)["PublicDnsName"]
+    standby_gateway_dns_name = standby_janus_instances and random.choice(standby_janus_instances)['public_dns_name']
 
     logger.info(f'gateway: {primary_gateway_dns_name}, standby gateway: {standby_gateway_dns_name}')
 
@@ -202,6 +200,7 @@ def handler(event, context):
                                                                         streams.get('standby'))
     current_stream = streams.get('current', 'primary')
 
+    # update iot thing shadow with new stream data
     iot_data.update_thing_shadow(
         thingName=thing_name,
         payload=json.dumps({'state': {
