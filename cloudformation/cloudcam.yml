@@ -1,55 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
 Resources:
-  ThumbStoreTopicRule:
-    Type: 'AWS::IoT::TopicRule'
-    Properties:
-      TopicRulePayload:
-        Sql: SELECT * FROM 'cloudcam/thumb/request/*'
-        Actions:
-          - Lambda:
-              FunctionArn: !GetAtt [ThumbStoreLambda, Arn]
-        RuleDisabled: false
-  ThumbStoreConnectedTopicRule:
-    Type: 'AWS::IoT::TopicRule'
-    Properties:
-      TopicRulePayload:
-        Sql: SELECT * FROM '$aws/events/presence/connected/#'
-        Actions:
-          - Lambda:
-              FunctionArn: !GetAtt [ThumbStoreLambda, Arn]
-        RuleDisabled: false
-  ThumbStoreLambda:
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      Role: !GetAtt [ThumbStoreRole, Arn]
-      Runtime: python3.6
-      Handler: iot_request_thumb.handler
-      Timeout: 10
-      FunctionName: 'iot_request_thumb'
-      Environment:
-        Variables:
-          S3_THUMB_BUCKET_NAME: !Sub '${AWS::StackName}-thumbs'
-      Code: ../lambda
-  ThumbStoreLambdaPermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      FunctionName: !GetAtt [ThumbStoreLambda, Arn]
-      Principal: iot.amazonaws.com
-      SourceArn: !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:rule/${ThumbStoreTopicRule}'
-      Action: 'lambda:InvokeFunction'
-  ThumbStoreLambdaConnectedPermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      FunctionName: !GetAtt [ThumbStoreLambda, Arn]
-      Principal: iot.amazonaws.com
-      SourceArn: !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:rule/${ThumbStoreConnectedTopicRule}'
-      Action: 'lambda:InvokeFunction'
   ThumbBucket:
-    Type: 'AWS::S3::Bucket'
+    Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub '${AWS::StackName}-thumbs'
   ThumbStoreRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -59,7 +16,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-ThumbStoreRole'
@@ -68,52 +25,75 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
               - Action:
-                  - 's3:GetObject'
-                  - 's3:PutObject'
+                  - s3:GetObject
+                  - s3:PutObject
                 Effect: Allow
                 Resource: !Sub 'arn:aws:s3:::${ThumbBucket}/*'
               - Effect: Allow
                 Action:
-                  - 'iot:Publish'
-                  - 'iot:Connect'
-                  - 'iot:UpdateThingShadow'
+                  - iot:Publish
+                  - iot:Connect
+                  - iot:UpdateThingShadow
                 Resource:
                   - '*'
+  ThumbStoreLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt [ThumbStoreRole, Arn]
+      Runtime: python3.6
+      Handler: iot_request_thumb.handler
+      Timeout: 10
+      FunctionName: iot_request_thumb
+      Environment:
+        Variables:
+          S3_THUMB_BUCKET_NAME: !Sub '${AWS::StackName}-thumbs'
+      CodeUri: ../lambda
+      Events:
+        ThumbStoreEvent:
+          Type: IoTRule
+          Properties:
+            AwsIotSqlVersion: 2016-03-23
+            Sql: "SELECT * FROM 'cloudcam/thumb/request/*'"
+        ThumbStoreConnectedEvent:
+          Type: IoTRule
+          Properties:
+            AwsIotSqlVersion: 2016-03-23
+            Sql: "SELECT * FROM '$aws/events/presence/connected/#'"
 
   CognitoWebRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-          Version: '2012-10-17'
+          Version: 2012-10-17
           Statement:
-            - Effect: 'Allow'
+            - Effect: Allow
               Principal:
                 Federated: cognito-identity.amazonaws.com
               Action:
-                - 'sts:AssumeRoleWithWebIdentity'
+                - sts:AssumeRoleWithWebIdentity
               Condition:
                 StringEquals:
                   'cognito-identity.amazonaws.com:aud': !Ref CognitoIdentityPool
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-CognitoWebRole'
           PolicyDocument:
-              Version: '2012-10-17'
+              Version: 2012-10-17
               Statement:
-                - Effect: 'Allow'
+                - Effect: Allow
                   Action:
-                    - 'iot:Connect'
-                    - 'iot:Subscribe'
-                    - 'iot:Publish'
-                    - 'iot:Receive'
+                    - iot:Connect
+                    - iot:Subscribe
+                    - iot:Publish
+                    - iot:Receive
                   Resource: '*'
-                - Effect: 'Allow'
+                - Effect: Allow
                   Action:
-                    - 'lambda:InvokeFunction'
+                    - lambda:InvokeFunction
                   Resource:
                     - !GetAtt [IotAttachThingPolicyLambda, Arn]
                     - !GetAtt [IotProvisionThingLambda, Arn]
@@ -122,7 +102,7 @@ Resources:
                     - !GetAtt [JanusStopStreamLambda, Arn]
                     - !GetAtt [ThumbStoreLambda, Arn]
   CognitoIdentityPool:
-    Type: 'AWS::Cognito::IdentityPool'
+    Type: AWS::Cognito::IdentityPool
     Properties:
       AllowUnauthenticatedIdentities: false
       CognitoIdentityProviders:
@@ -131,13 +111,13 @@ Resources:
       CognitoEvents:
         SyncTrigger: !GetAtt [CognitoPresignupLambda, Arn]
   CognitoIdentityPoolRoleAttachment:
-    Type: 'AWS::Cognito::IdentityPoolRoleAttachment'
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
     Properties:
       IdentityPoolId: !Ref CognitoIdentityPool
       Roles:
         authenticated: !GetAtt [CognitoWebRole, Arn]
   CognitoPresignupLambdaRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -147,7 +127,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-CognitoPresignupLambdaRole'
@@ -156,35 +136,36 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
               - Effect: Allow
                 Action:
-                  - 'iot:DescribeEndpoint'
-                  - 'sts:AssumeRole'
+                  - iot:DescribeEndpoint
+                  - sts:AssumeRole
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - 'execute-api:Invoke'
+                  - execute-api:Invoke
                 Resource: '*'
+
   CognitoPresignupLambda:
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Serverless::Function
     Properties:
       Role: !GetAtt [CognitoPresignupLambdaRole, Arn]
       Runtime: python3.6
       Handler: cognito_presignup.handler
-      Code: ../lambda
+      CodeUri: ../lambda
   CognitoPresignupLambdaPermission:
-    Type: 'AWS::Lambda::Permission'
+    Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !GetAtt [CognitoPresignupLambda, Arn]
-      Action: 'lambda:InvokeFunction'
-      Principal: 'cognito-idp.amazonaws.com'
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
       SourceArn: !GetAtt [CognitoUserPool, Arn]
   CognitoUserPool:
-    Type: 'AWS::Cognito::UserPool'
+    Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Sub '${AWS::StackName}UserPool'
       LambdaConfig:
@@ -197,14 +178,14 @@ Resources:
           RequireSymbols: false
           RequireUppercase: false
   CognitoClient:
-    Type: 'AWS::Cognito::UserPoolClient'
+    Type: AWS::Cognito::UserPoolClient
     Properties:
         ClientName: !Sub '${AWS::StackName}UserPoolClient'
         GenerateSecret: false
         UserPoolId: !Ref CognitoUserPool
 
   IotAttachThingPolicyLambdaRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -214,7 +195,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-IotAttachThingPolicyLambdaRole'
@@ -223,35 +204,35 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
               - Effect: Allow
                 Action:
-                  - 'iot:DescribeEndpoint'
-                  - 'iot:CreatePolicy'
-                  - 'iot:DeletePolicy'
-                  - 'iot:AttachPrincipalPolicy'
-                  - 'iot:DetachPrincipalPolicy'
-                  - 'iot:UpdateThing'
-                  - 'sts:AssumeRole'
+                  - iot:DescribeEndpoint
+                  - iot:CreatePolicy
+                  - iot:DeletePolicy
+                  - iot:AttachPrincipalPolicy
+                  - iot:DetachPrincipalPolicy
+                  - iot:UpdateThing
+                  - sts:AssumeRole
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - 'execute-api:Invoke'
+                  - execute-api:Invoke
                 Resource: '*'
   IotAttachThingPolicyLambda:
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Serverless::Function
     Properties:
       Role: !GetAtt [IotAttachThingPolicyLambdaRole, Arn]
-      FunctionName: 'iot_attach_thing_policy'
+      FunctionName: iot_attach_thing_policy
       Runtime: python3.6
       Handler: iot_attach_thing_policy.handler
-      Code: ../lambda
+      CodeUri: ../lambda
 
   IotProvisionThingLambdaRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -261,7 +242,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-IotProvisionThingLambdaRole'
@@ -270,37 +251,37 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
               - Effect: Allow
                 Action:
-                  - 'iot:DescribeEndpoint'
-                  - 'iot:CreatePolicy'
-                  - 'iot:DeletePolicy'
-                  - 'iot:AttachPrincipalPolicy'
-                  - 'iot:DetachPrincipalPolicy'
-                  - 'iot:CreateThing'
-                  - 'iot:CreateKeysAndCertificate'
-                  - 'sts:AssumeRole'
+                  - iot:DescribeEndpoint
+                  - iot:CreatePolicy
+                  - iot:DeletePolicy
+                  - iot:AttachPrincipalPolicy
+                  - iot:DetachPrincipalPolicy
+                  - iot:CreateThing
+                  - iot:CreateKeysAndCertificate
+                  - sts:AssumeRole
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - 'execute-api:Invoke'
+                  - execute-api:Invoke
                 Resource: '*'
   IotProvisionThingLambda:
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Serverless::Function
     Properties:
       Role: !GetAtt [IotProvisionThingLambdaRole, Arn]
-      FunctionName: 'iot_provision_thing'
+      FunctionName: iot_provision_thing
       Runtime: python3.6
       Timeout: 10
       Handler: iot_provision_thing.handler
-      Code: ../lambda
+      CodeUri: ../lambda
 
   IotListThingsLambdaRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -310,7 +291,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-IotListThingsLambdaRole'
@@ -319,31 +300,31 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
               - Effect: Allow
                 Action:
-                  - 'iot:ListPrincipalPolicies'
-                  - 'iot:DescribeThing'
-                  - 'sts:AssumeRole'
+                  - iot:ListPrincipalPolicies
+                  - iot:DescribeThing
+                  - sts:AssumeRole
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - 'execute-api:Invoke'
+                  - execute-api:Invoke
                 Resource: '*'
   IotListThingsLambda:
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Serverless::Function
     Properties:
       Role: !GetAtt [IotListThingsLambdaRole, Arn]
-      FunctionName: 'iot_list_things'
+      FunctionName: iot_list_things
       Runtime: python3.6
       Handler: iot_list_things.handler
-      Code: ../lambda
+      CodeUri: ../lambda
 
   UiBucket:
-    Type: 'AWS::S3::Bucket'
+    Type: AWS::S3::Bucket
     Properties:
       AccessControl: PublicRead
       WebsiteConfiguration:
@@ -351,7 +332,7 @@ Resources:
       BucketName: !Ref UiBucketName
 
   JanusStartStreamLambdaRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -361,7 +342,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-JanusStartStreamLambdaRole'
@@ -370,40 +351,40 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
               - Effect: Allow
                 Action:
-                  - 'sts:AssumeRole'
-                  - 'iot:Publish'
-                  - 'iot:Connect'
-                  - 'iot:GetThingShadow'
-                  - 'iot:UpdateThingShadow'
-                  - 'lightsail:GetInstance'
-                  - 'lightsail:GetInstances'
+                  - sts:AssumeRole
+                  - iot:Publish
+                  - iot:Connect
+                  - iot:GetThingShadow
+                  - iot:UpdateThingShadow
+                  - lightsail:GetInstance
+                  - lightsail:GetInstances
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - 'execute-api:Invoke'
+                  - execute-api:Invoke
                 Resource: '*'
   JanusStartStreamLambda:
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Serverless::Function
     Properties:
       Role: !GetAtt [JanusStartStreamLambdaRole, Arn]
-      FunctionName: 'janus_start_stream'
+      FunctionName: janus_start_stream
       Runtime: python3.6
       Handler: janus_start_stream.handler
       Timeout: 10
-      Code: ../lambda
+      CodeUri: ../lambda
       Environment:
         Variables:
           JANUS_HOSTED_ZONE_DOMAIN: !Ref JanusHostedZoneDomain
           JANUS_INSTANCE_NAME_PREFIX: !Ref JanusInstanceNamePrefix
 
   JanusStopStreamLambdaRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -413,7 +394,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-JanusStopStreamLambdaRole'
@@ -422,34 +403,34 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
               - Effect: Allow
                 Action:
-                  - 'sts:AssumeRole'
-                  - 'iot:Publish'
-                  - 'iot:Connect'
-                  - 'iot:GetThingShadow'
-                  - 'iot:UpdateThingShadow'
+                  - sts:AssumeRole
+                  - iot:Publish
+                  - iot:Connect
+                  - iot:GetThingShadow
+                  - iot:UpdateThingShadow
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - 'execute-api:Invoke'
+                  - execute-api:Invoke
                 Resource: '*'
   JanusStopStreamLambda:
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Serverless::Function
     Properties:
       Role: !GetAtt [JanusStopStreamLambdaRole, Arn]
-      FunctionName: 'janus_stop_stream'
+      FunctionName: janus_stop_stream
       Runtime: python3.6
       Handler: janus_stop_stream.handler
       Timeout: 10
-      Code: ../lambda
+      CodeUri: ../lambda
 
   JanusScaleLightsailLambdaRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -459,7 +440,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-JanusScaleLightsailLambdaRole'
@@ -468,34 +449,34 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
               - Effect: Allow
                 Action:
-                  - 'sts:AssumeRole'
-                  - 'lightsail:GetInstance'
-                  - 'lightsail:GetInstances'
-                  - 'lightsail:CreateInstances'
-                  - 'lightsail:DeleteInstance'
-                  - 'lightsail:OpenInstancePublicPorts'
-                  - 'route53:ChangeResourceRecordSets'
-                  - 'kms:Decrypt'
+                  - sts:AssumeRole
+                  - lightsail:GetInstance
+                  - lightsail:GetInstances
+                  - lightsail:CreateInstances
+                  - lightsail:DeleteInstance
+                  - lightsail:OpenInstancePublicPorts
+                  - route53:ChangeResourceRecordSets
+                  - kms:Decrypt
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - 'execute-api:Invoke'
+                  - execute-api:Invoke
                 Resource: '*'
   JanusScaleLightsailLambda:
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Serverless::Function
     Properties:
       Role: !GetAtt [JanusScaleLightsailLambdaRole, Arn]
-      FunctionName: 'janus_scale_lightsail'
+      FunctionName: janus_scale_lightsail
       Runtime: python3.6
       Handler: janus_scale_lightsail.handler
       Timeout: 300
-      Code: ../lambda
+      CodeUri: ../lambda
       Environment:
         Variables:
           LIGHTSAIL_AZS: !Ref LightsailAzs
@@ -506,55 +487,55 @@ Resources:
           JANUS_HOSTED_ZONE_DOMAIN: !Ref JanusHostedZoneDomain
           JANUS_INSTANCE_NAME_PREFIX: !Ref JanusInstanceNamePrefix
   JanusKmsKey:
-    Type: "AWS::KMS::Key"
+    Type: AWS::KMS::Key
     Properties:
       Enabled: true
       EnableKeyRotation: false
       KeyPolicy:
-        Version: '2012-10-17'
-        Id: 'janus-kms'
+        Version: 2012-10-17
+        Id: janus-kms
         Statement:
-          - Effect: 'Allow'
+          - Effect: Allow
             Principal:
               AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
             Action:
-              - "kms:*"
+              - 'kms:*'
             Resource: '*'
-          - Effect: 'Allow'
+          - Effect: Allow
             Principal:
               AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:user/cloudcam-ops'
             Action:
-              - "kms:Create*"
-              - "kms:Describe*"
-              - "kms:Enable*"
-              - "kms:List*"
-              - "kms:Put*"
-              - "kms:Update*"
-              - "kms:Revoke*"
-              - "kms:Disable*"
-              - "kms:Get*"
-              - "kms:Delete*"
-              - "kms:ScheduleKeyDeletion"
-              - "kms:CancelKeyDeletion"
+              - 'kms:Create*'
+              - 'kms:Describe*'
+              - 'kms:Enable*'
+              - 'kms:List*'
+              - 'kms:Put*'
+              - 'kms:Update*'
+              - 'kms:Revoke*'
+              - 'kms:Disable*'
+              - 'kms:Get*'
+              - 'kms:Delete*'
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
             Resource: '*'
-          - Effect: 'Allow'
+          - Effect: Allow
             Principal:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - "kms:Decrypt"
+              - kms:Decrypt
             Resource: '*'
   JanusKmsKeyAlias:
-    Type: "AWS::KMS::Alias"
+    Type: AWS::KMS::Alias
     Properties:
-      AliasName: "alias/janus"
+      AliasName: 'alias/janus'
       TargetKeyId: !Ref JanusKmsKey
 
 Parameters:
   UiBucketName:
     Type: String
     Description: 'S3 UI bucket name. Must be the same as the UI domain name for CNAME redirect to work'
-    Default: 'beta.cloudcam.space'
+    Default: beta.cloudcam.space
   JanusCertPem:
     Type: String
     Description: 'Janus gateway SSL cert PEM'
@@ -570,11 +551,11 @@ Parameters:
   LightsailBlueprintId:
     Type: String
     Description: 'Lightsail Janus gateway instance blueprint (image) id'
-    Default: 'amazon_linux_2017_03_1_1'
+    Default: amazon_linux_2017_03_1_1
   LightsailBundleId:
     Type: String
     Description: 'Lightsail Janus gateway instance bundle (type) id'
-    Default: 'nano_1_0'
+    Default: nano_1_0
   LightsailJanusImage:
     Type: String
     Description: 'Lightsail Janus gateway Docker image name'
@@ -582,15 +563,15 @@ Parameters:
   JanusHostedZoneId:
     Type: String
     Description: 'AWS Hosted Zone Id where Janus instances will receive DNS names'
-    Default: 'Z1MUZ3ZP15MONF'
+    Default: Z1MUZ3ZP15MONF
   JanusHostedZoneDomain:
     Type: String
     Description: 'AWS Hosted Zone domain where Janus instances will receive DNS names'
-    Default: 'cloudcam.space'
+    Default: cloudcam.space
   JanusInstanceNamePrefix:
     Type: String
     Description: 'Janus instance/dns name prefix'
-    Default: 'ls-janus'
+    Default: ls-janus
 
 Outputs:
   IdentityPoolId:
