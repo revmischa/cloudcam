@@ -14,9 +14,14 @@ The backend services will be provided by AWS IoT, Lambda and S3.
 This is based on open source as much as humanly possible. Contributions are encouraged and welcome.  
 There is full support for embedded linux. Video streaming will be done with gstreamer.  
 
-# Building:
+### Building:
 1. Type `make`
 2. [Report any issues](https://github.com/revmischa/cloudcam/issues/new)
+
+### Setting up AWS infrastructure
+1. Install AWS CLI and authenticate 
+2. Run `cd cloudformation && ./deploy-stack.sh`
+2. (optional) Run `cd cloudformation && ./encrypt-ssl-key.sh` to encrypt the SSL private key (`certs/$domain/server.key`) for the Janus gateway subdomain with the key managed by the AWS KMS and replace the `janus_encrypted_ssl_key_pem` value in `janus_scale_lightsail.py` with the result 
 
 
 ### Architecture
