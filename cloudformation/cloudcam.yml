@@ -462,6 +462,13 @@ Resources:
                   - lightsail:DeleteInstance
                   - lightsail:OpenInstancePublicPorts
                   - route53:ChangeResourceRecordSets
+                  - route53:ListHealthChecks
+                  - route53:CreateHealthCheck
+                  - route53:DeleteHealthCheck
+                  - route53:ChangeTagsForResource
+                  - route53:TestDNSAnswer
+                  - cloudwatch:PutMetricAlarm
+                  - cloudwatch:DeleteAlarms
                   - kms:Decrypt
                 Resource: '*'
               - Effect: Allow
@@ -486,6 +493,7 @@ Resources:
           JANUS_HOSTED_ZONE_ID: !Ref JanusHostedZoneId
           JANUS_HOSTED_ZONE_DOMAIN: !Ref JanusHostedZoneDomain
           JANUS_INSTANCE_NAME_PREFIX: !Ref JanusInstanceNamePrefix
+
   JanusKmsKey:
     Type: AWS::KMS::Key
     Properties:

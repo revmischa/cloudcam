@@ -68,7 +68,15 @@ AQICAHhg3srKuzXVEqr4El6T4oNnsckLCHVtm0Ef90lV+hOVIwGmjNPxoK9w9P+MXBqZf8VHAAAHEDCC
 
 lightsail = boto3.client('lightsail')
 route53 = boto3.client('route53')
+cloudwatch_us_east_1 = boto3.client('cloudwatch',
+                                    region_name='us-east-1')  # this is required for Route53 health check alarms
 kms = boto3.client('kms')
+sts = boto3.client('sts')
+
+aws_account_id = sts.get_caller_identity()['Account']
+
+# Route53 health check alarms topic must reside in us-east-1 so it's created elsewhere and referenced here by the arn
+janus_health_check_alarms_topic_arn = f'arn:aws:sns:us-east-1:{aws_account_id}:JanusHealthCheckAlarms'
 
 
 def get_lightsail_init_script():
@@ -141,10 +149,11 @@ def create_janus_instance():
                                bundleId=lightsail_bundle_id,
                                userData=get_lightsail_init_script())
     # wait until the instance is running
-    for i in range(120):
+    for _ in range(120):
         time.sleep(1)
         if get_instance_status(instance_name) == 'running':
             break
+    logger.info(f'Instance {instance_name} is running')
     # open ports requred for Janus
     for port in [8080, 8088, 8089, 7889, 8188]:
         open_instance_public_tcp_port(instance_name, port)
@@ -158,77 +167,145 @@ def create_janus_instance():
     route53.change_resource_record_sets(
         HostedZoneId=janus_hosted_zone_id,
         ChangeBatch={
-            'Changes': [
-                {
-                    'Action': 'UPSERT',
-                    'ResourceRecordSet': {
-                        'Name': domain_name,
-                        'Type': 'A',
-                        'TTL': 600,
-                        'ResourceRecords': [
-                            {
-                                'Value': ipv4_address
-                            }
-                        ]
-                    }
+            'Changes': [{
+                'Action': 'UPSERT',
+                'ResourceRecordSet': {
+                    'Name': domain_name,
+                    'Type': 'A',
+                    'TTL': 600,
+                    'ResourceRecords': [{
+                        'Value': ipv4_address
+                    }]
                 }
-            ]
+            }]
         })
-    # todo: pass ssl cert into the container
+    logger.info(f'Created {domain_name} DNS record for the {instance_name} instance')
+    # create route53 health check for the REST API (https on port 8089)
+    healthcheck_id = route53.create_health_check(
+        CallerReference=domain_name,
+        HealthCheckConfig={
+            'Port': 8089,
+            'Type': 'HTTPS',
+            'ResourcePath': '/janus/info',
+            'FullyQualifiedDomainName': domain_name,
+            'RequestInterval': 30,
+            'FailureThreshold': 10,  # 30*10 = 5 minutes
+            'MeasureLatency': False
+        }
+    )['HealthCheck']['Id']
+    route53.change_tags_for_resource(
+        ResourceType='healthcheck',
+        ResourceId=healthcheck_id,
+        AddTags=[{
+            'Key': 'Name',
+            'Value': f'Health check on https://{domain_name}:8089/janus/info endpoint'
+        }]
+    )
+    # the health check alarm must reside in us-east-1 since Route53 can only work with such
+    cloudwatch_us_east_1.put_metric_alarm(
+        AlarmName=f'{domain_name}',
+        AlarmDescription=f'Alarm for Route53 health check on https://{domain_name}:8089/janus/info endpoint',
+        ActionsEnabled=True,
+        AlarmActions=[janus_health_check_alarms_topic_arn],
+        MetricName='HealthCheckStatus',
+        Namespace='AWS/Route53',
+        Statistic='Minimum',
+        Dimensions=[{
+            'Name': 'HealthCheckId',
+            'Value': healthcheck_id
+        }],
+        Period=60,
+        EvaluationPeriods=1,
+        Threshold=1.0,
+        ComparisonOperator='LessThanThreshold'
+    )
+    logger.info(f'Created health check with id {healthcheck_id}')
     return {'name': instance_name}
 
 
-def remove_janus_instance(instance):
-    """Removes a Lightsail instance"""
+def remove_health_checks(domain_name):
+    """Removes Route53 health checks matching supplied domain name"""
+    paginator = route53.get_paginator('list_health_checks')
+    response_iterator = paginator.paginate()
+    for page in response_iterator:
+        for health_check in page['HealthChecks']:
+            health_check_id = health_check['Id']
+            health_check_config = health_check['HealthCheckConfig']
+            if health_check_config['FullyQualifiedDomainName'] == domain_name:
+                logger.info(f'Removing health check {health_check_id} and associated alarms')
+                route53.delete_health_check(
+                    HealthCheckId=health_check_id
+                )
+                cloudwatch_us_east_1.delete_alarms(
+                    AlarmNames=[f'{domain_name}']
+                )
+
+
+def remove_janus_instance(instance_name):
+    """Removes a Lightsail instance and associated DNS records and health checks"""
+    logger.info(f'Removing Janus instance {instance_name}')
     # get instance ip addresses
-    instance_name = instance['name']
-    instance = lightsail.get_instance(instanceName=instance_name)
-    ipv4_address = instance['instance']['publicIpAddress']
     domain_name = f'{instance_name}.{janus_hosted_zone_domain}'
+    # query route53 for the ip address since we need it to remove the dns record/health checks
+    ipv4_address = route53.test_dns_answer(
+        HostedZoneId=janus_hosted_zone_id,
+        RecordName=domain_name,
+        RecordType='A'
+    )['RecordData'][0]
+    # delete the health check
+    remove_health_checks(domain_name)
     # remove the dns alias
     route53.change_resource_record_sets(
         HostedZoneId=janus_hosted_zone_id,
         ChangeBatch={
-            'Changes': [
-                {
-                    'Action': 'DELETE',
-                    'ResourceRecordSet': {
-                        'Name': domain_name,
-                        'Type': 'A',
-                        'TTL': 600,
-                        'ResourceRecords': [
-                            {
-                                'Value': ipv4_address
-                            }
-                        ]
-                    }
+            'Changes': [{
+                'Action': 'DELETE',
+                'ResourceRecordSet': {
+                    'Name': domain_name,
+                    'Type': 'A',
+                    'TTL': 600,
+                    'ResourceRecords': [{
+                        'Value': ipv4_address
+                    }]
                 }
-            ]
+            }]
         })
     # delete the instance
     lightsail.delete_instance(instanceName=instance_name)
 
 
-# todo: check/purge dead instances
-# todo: rolling image upgrades
 def handler(event, context):
-    """Ensures the specified number of Janus container instances are running on Hyper.sh"""
+    """Ensures the specified number of Janus container instances are running"""
     logger.info(json.dumps(event, sort_keys=True, indent=4))
 
     # lambda parameters
-    required_instance_count = event['requiredInstanceCount']
+    required_instance_count = event.get('requiredInstanceCount')
+    alarms = list(filter(None, map(lambda record: json.loads(record.get('Sns', {}).get('Message', '')),
+                                   event.get('Records', []))))
 
     instances = get_janus_instances()
     current_instance_count = len(instances)
 
-    logger.info(f'Janus instance required count: {required_instance_count}, current count: {current_instance_count}')
+    # required_instance_count is specified, add/remove instances until the actual count matches the required_instance_count
+    if required_instance_count is not None:
+        logger.info(
+            f'Janus instance required count: {required_instance_count}, current count: {current_instance_count}')
+        if current_instance_count > required_instance_count:
+            for _ in range(current_instance_count - required_instance_count):
+                remove_janus_instance(instances[-1]['name'])
+                instances.pop()
+        elif current_instance_count < required_instance_count:
+            for _ in range(required_instance_count - current_instance_count):
+                create_janus_instance()
 
-    if current_instance_count > required_instance_count:
-        for _ in range(current_instance_count - required_instance_count):
-            logger.info(f'Removing Janus instance {instances[-1]}')
-            remove_janus_instance(instances[-1])
-            instances.pop()
-    elif current_instance_count < required_instance_count:
-        for _ in range(required_instance_count - current_instance_count):
-            instance = create_janus_instance()
-            logger.info(f'Created Janus instance {instance}')
+    # if we are called via health check alarm actions, replace dead instances with new ones
+    if alarms:
+        logger.info(f'Alarms: {alarms}')
+        for alarm in alarms:
+            domain_name = alarm['AlarmName']
+            matching_instances = list(filter(lambda instance: instance['name'] in domain_name, instances))
+            for matching_instance in matching_instances:
+                instance_name = matching_instance['name']
+                logger.info(f'Instance {instance_name} is dead, replacing it with a new one')
+                remove_janus_instance(instance_name)
+                create_janus_instance()
