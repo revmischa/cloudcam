@@ -58,26 +58,28 @@ static GstPadProbeReturn jpeg_src_pad_probe_cb(GstPad          *pad,
   gst_thread_ctx *ctx = (gst_thread_ctx *)user_data;
   GstMapInfo map;
   GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
-  if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-    pthread_mutex_lock(&ctx->snapshot_mutex);
-    // (re)allocate the snapshot buffer
-    if (map.size > ctx->snapshot_buf_capacity || ctx->snapshot_buf == NULL) {
-      if (ctx->snapshot_buf != NULL) {
-        free(ctx->snapshot_buf);
-      }
-      ctx->snapshot_buf = malloc(map.size);
-      ctx->snapshot_buf_capacity = map.size;
-    }
-    // copy jpeg data into ctx->snapshot_buf
-    memcpy(ctx->snapshot_buf, map.data, map.size);
-    ctx->snapshot_size = map.size;
-    ctx->snapshot_frame = ctx->current_frame;
-    DEBUG("jpeg_src_pad_probe_cb(): updated snapshot of frame %lu, %lu bytes", ctx->snapshot_frame, ctx->snapshot_size);
-    // wake up any threads waiting for a snapshot
-    pthread_cond_broadcast(&ctx->snapshot_cond);
-    pthread_mutex_unlock(&ctx->snapshot_mutex);
-    gst_buffer_unmap(buffer, &map);
+  if (!gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+    ERROR("jpeg_src_pad_probe_cb(): gst_buffer_map() failed");
+    return GST_PAD_PROBE_OK;
   }
+  pthread_mutex_lock(&ctx->snapshot_mutex);
+  // (re)allocate the snapshot buffer
+  if (map.size > ctx->snapshot_buf_capacity || ctx->snapshot_buf == NULL) {
+    if (ctx->snapshot_buf != NULL) {
+      free(ctx->snapshot_buf);
+    }
+    ctx->snapshot_buf = malloc(map.size);
+    ctx->snapshot_buf_capacity = map.size;
+  }
+  // copy jpeg data into ctx->snapshot_buf
+  memcpy(ctx->snapshot_buf, map.data, map.size);
+  ctx->snapshot_size = map.size;
+  ctx->snapshot_frame = ctx->current_frame;
+  DEBUG("jpeg_src_pad_probe_cb(): updated snapshot of frame %lu, %lu bytes", ctx->snapshot_frame, ctx->snapshot_size);
+  // wake up any threads waiting for a snapshot
+  pthread_cond_broadcast(&ctx->snapshot_cond);
+  pthread_mutex_unlock(&ctx->snapshot_mutex);
+  gst_buffer_unmap(buffer, &map);
   return GST_PAD_PROBE_OK;
 }
 
