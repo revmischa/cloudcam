@@ -2,14 +2,17 @@
 
 #include <signal.h>
 #include <pthread.h>
+#include <assert.h>
 #include "cloudcam/cloudcam.h"
 #include "cloudcam/log.h"
 #include "cloudcam/gst.h"
 
 // creates a jpeg snapshot of the next available frame
-// buffer returned in *data must be released via free()
-size_t gst_get_jpeg_snapshot(gst_thread_ctx *ctx, void **data)
+// returned buffer must be released via free()
+void *gst_get_jpeg_snapshot(gst_thread_ctx *ctx, size_t *snapshot_size)
 {
+  assert(ctx != NULL);
+  assert(snapshot_size != NULL);
   pthread_mutex_lock(&ctx->snapshot_mutex);
   unsigned long prev_snapshot_frame = ctx->snapshot_frame;
   // set the update flag and wait until the snapshot is created
@@ -19,16 +22,14 @@ size_t gst_get_jpeg_snapshot(gst_thread_ctx *ctx, void **data)
   }
   while (ctx->snapshot_frame == prev_snapshot_frame); // wait until snapshot was actually updated
   // copy the snapshot and return
-  size_t snapshot_size = ctx->snapshot_size;
-  if (snapshot_size != 0) {
-    *data = malloc(snapshot_size);
-    memcpy(*data, ctx->snapshot_buf, snapshot_size);
+  void *snapshot_buf = NULL;
+  if (ctx->snapshot_size != 0) {
+    snapshot_buf = malloc(ctx->snapshot_size);
+    memcpy(snapshot_buf, ctx->snapshot_buf, ctx->snapshot_size);
   }
-  else {
-    *data = NULL;
-  }
+  *snapshot_size = ctx->snapshot_size;
   pthread_mutex_unlock(&ctx->snapshot_mutex);
-  return snapshot_size;
+  return snapshot_buf;
 }
 
 // this pad probe passes the video frame to jpeg encoder or drops it depending on if a snapshot was requested
@@ -38,6 +39,7 @@ static GstPadProbeReturn jpeg_sink_pad_probe_cb(GstPad          *pad,
                                                 gpointer         user_data)
 {
   gst_thread_ctx *ctx = (gst_thread_ctx *)user_data;
+  assert(ctx != NULL);
   GstPadProbeReturn probe_return = GST_PAD_PROBE_DROP; // by default, drop the buffer
   pthread_mutex_lock(&ctx->snapshot_mutex);
   ++ctx->current_frame; // update the total frame count
@@ -56,6 +58,7 @@ static GstPadProbeReturn jpeg_src_pad_probe_cb(GstPad          *pad,
                                                gpointer         user_data)
 {
   gst_thread_ctx *ctx = (gst_thread_ctx *)user_data;
+  assert(ctx != NULL);
   GstMapInfo map;
   GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
   if (!gst_buffer_map(buffer, &map, GST_MAP_READ)) {
@@ -85,6 +88,10 @@ static GstPadProbeReturn jpeg_src_pad_probe_cb(GstPad          *pad,
 
 // updates stream parameters
 void gst_update_stream_params(gst_thread_ctx *ctx, int h264_bitrate, const char *rtp_host, int rtp_port) {
+  assert(ctx != NULL);
+  assert(h264_bitrate != 0);
+  assert(rtp_host != NULL);
+  assert(rtp_port != 0);
   pthread_mutex_lock(&ctx->params_mutex);
   // copy values into the gst_thread_ctx
   ctx->h264_bitrate = h264_bitrate;
@@ -95,6 +102,7 @@ void gst_update_stream_params(gst_thread_ctx *ctx, int h264_bitrate, const char 
 
 static gboolean gst_update_stream_params_cb(gpointer user_data) {
   gst_thread_ctx *ctx = (gst_thread_ctx *)user_data;
+  assert(ctx != NULL);
   pthread_mutex_lock(&ctx->params_mutex);
   guint prev_h264_bitrate;
   g_object_get(G_OBJECT(ctx->x264enc), "bitrate", &prev_h264_bitrate, NULL);
@@ -116,6 +124,7 @@ static gboolean gst_update_stream_params_cb(gpointer user_data) {
 
 static void *gst_thread(void *param) {
   gst_thread_ctx *ctx = (gst_thread_ctx *)param;
+  assert(ctx != NULL);
 
   // initialize gst_thread_ctx
   pthread_mutex_init(&ctx->snapshot_mutex, NULL);
@@ -212,6 +221,7 @@ static void *gst_thread(void *param) {
 
 // starts the GStreamer thread/stream
 void gst_start_stream(gst_thread_ctx *ctx) {
+  assert(ctx != NULL);
   int r = pthread_create(&ctx->thread_id, NULL, &gst_thread, ctx);
   if (r != 0) {
     ERROR("gst_start_stream(): pthread_create failed (%d)", r);

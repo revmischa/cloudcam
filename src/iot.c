@@ -254,8 +254,8 @@ void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_l
     IoT_Error_t rc = 0;
 
     // upload stream snapshot to s3
-    void *snapshot_data = NULL;
-    size_t snapshot_size = gst_get_jpeg_snapshot(ctx->gst, &snapshot_data);
+    size_t snapshot_size = 0;
+    void *snapshot_data = gst_get_jpeg_snapshot(ctx->gst, &snapshot_size);
     if (snapshot_data != NULL && snapshot_size != 0) {
       rc = cloudcam_upload_buffer_to_s3_presigned(ctx, snapshot_data, snapshot_size, json_string_value(upload_url));
     }

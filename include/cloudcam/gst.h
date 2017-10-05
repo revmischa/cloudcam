@@ -52,7 +52,7 @@ void gst_start_stream(gst_thread_ctx *ctx);
 void gst_update_stream_params(gst_thread_ctx *ctx, int h264_bitrate, const char *rtp_host, int rtp_port);
 
 // creates a jpeg snapshot of the next available frame
-// buffer returned in *data must be released via free()
-size_t gst_get_jpeg_snapshot(gst_thread_ctx *ctx, void **data);
+// returned buffer must be released via free()
+void *gst_get_jpeg_snapshot(gst_thread_ctx *ctx, size_t *snapshot_size);
 
 #endif // CLOUDCAM_GST_H
