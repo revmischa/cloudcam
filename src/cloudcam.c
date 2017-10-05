@@ -3,6 +3,7 @@
 #include "cloudcam/log.h"
 // AWS IoT interfacing
 #include "cloudcam/iot.h"
+#include "cloudcam/gst.h"
 
 static int cloudcam_global_init();
 
@@ -31,14 +32,19 @@ int main(int argc, char **argv) {
     ERROR("Failed initializing CloudCam client context");
     return 1;
   }
+
   if (cloudcam_global_init() != SUCCESS) {
     ERROR("Failed to initialize all required components");
     return 1;
   }
+
+  gst_start_stream(ctx.gst);
+
   if (cloudcam_connect_blocking(&ctx) != SUCCESS) {
     ERROR("Failed to connect to AWSIoT service");
     return 2;
   }
+
 
   while (1) {
     // mainloop
@@ -63,6 +69,9 @@ IoT_Error_t cloudcam_init_ctx(cloudcam_ctx *ctx, char *app_dir_path) {
   // alloc IoT client
   AWS_IoT_Client *iotc = malloc(sizeof(AWS_IoT_Client));
   ctx->iotc = iotc;
+
+  gst_thread_ctx *gst = malloc(sizeof(gst_thread_ctx));
+  ctx->gst = gst;
 
   return SUCCESS;
 }

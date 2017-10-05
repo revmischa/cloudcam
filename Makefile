@@ -1,5 +1,5 @@
 ###### --- This application
-SRCS = src/cloudcam.c src/log.c src/iot.c src/s3.c
+SRCS = src/cloudcam.c src/log.c src/gst.c src/iot.c src/s3.c
 OBJS = $(SRCS:.c=.o)
 PROGS = cloudcam
 
@@ -43,6 +43,7 @@ INCLUDE_DIRS += -I $(PLATFORM_THREAD_DIR)
 INCLUDE_DIRS += -I $(MBEDTLS_DIR)/include
 INCLUDE_DIRS += -I $(LIBCURL_PKG)/include
 INCLUDE_DIRS += -I $(JANSSON_DIR)/build/include
+INCLUDE_DIRS += `pkg-config --cflags gstreamer-1.0`
 
 ###### --- link flags
 TLS_LIB_FILES = -L$(TLS_LIB_DIR) -l:libmbedtls.a -l:libmbedcrypto.a -l:libmbedx509.a
@@ -50,6 +51,7 @@ LDFLAGS += -L$(CURL_LIB_DIR) -l:libcurl.a -lz
 LDFLAGS += -L$(JANSSON_LIB_DIR) -l:libjansson.a
 LDFLAGS += -L$(VENDOR_DIR) -laws-iot
 LDFLAGS += $(TLS_LIB_FILES) -lpthread
+LDFLAGS += `pkg-config --libs gstreamer-1.0`
 
 ###### --- compile flags
 CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS)

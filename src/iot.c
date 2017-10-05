@@ -6,6 +6,7 @@
 #include <curl/curl.h>
 #include "cloudcam/iot.h"
 #include "cloudcam/s3.h"
+#include "cloudcam/gst.h"
 #include "../config/aws_iot_config.h"
 
 // writes a string to the specified file, creating it if necessary
@@ -250,20 +251,15 @@ void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_l
     }
     INFO("Delta - shadow state delta update: download_url %s\n", json_string_value(download_url));
 
-    // since we don't yet support grabbing actual thumbnails from the camera, get a random picture off the Internet
-    const char *thumbnail_path = "thumb.jpg";
-    if (download_file("http://lorempixel.com/200/200/nature/", thumbnail_path) != SUCCESS) {
-      thumbnail_path = "sample/snowdino.jpg";
-    }
+    IoT_Error_t rc = 0;
 
-    // upload to s3
-    FILE *fp = fopen(thumbnail_path, "rb");
-    if (!fp) {
-      ERROR("error: thumb fopen failed\n");
-      return;
+    // upload stream snapshot to s3
+    void *snapshot_data = NULL;
+    size_t snapshot_size = gst_get_jpeg_snapshot(ctx->gst, &snapshot_data);
+    if (snapshot_data != NULL && snapshot_size != 0) {
+      rc = cloudcam_upload_buffer_to_s3_presigned(ctx, snapshot_data, snapshot_size, json_string_value(upload_url));
     }
-    IoT_Error_t rc = cloudcam_upload_file_to_s3_presigned(ctx, fp, json_string_value(upload_url));
-    fclose(fp);
+    free(snapshot_data);
 
     // update device shadow with the result
     char json_buf[AWS_IOT_MQTT_TX_BUF_LEN];
@@ -282,12 +278,6 @@ void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_l
   }
 }
 
-// current gstreamer subprocess pid (a global since there could only be one)
-static pid_t gstreamer_pid = 0;
-
-// stream configuration for the currently running gstreamer subprocess so we don't have to restart it if nothing changed
-static char *prev_streams_json = NULL;
-
 // a/v streams delta handler (streams key)
 void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {
   cloudcam_ctx *ctx = delta_handler_ctx;
@@ -296,13 +286,7 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
   INFO("shadow_streams_delta_handler");
   INFO("%.*s", json_str_len, json_str);
 
-  // check if stream configuration has changed
-  char *json_str_copy = strndup(json_str, json_str_len);
-  if (prev_streams_json && strcmp(prev_streams_json, json_str_copy) == 0) {
-    free(json_str_copy);
-    INFO("no stream state changes, ignoring the delta");
-    return;
-  }
+  const int default_h264_bitrate = 256;
 
   if (json_str && json_str_len > 0 && js) {
     json_error_t json_error;
@@ -311,15 +295,8 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
       ERROR("error: payload parsing error: %s at %s\n", json_error.text, json_error.source);
       return;
     }
-    // if there is no current stream configured, stop the gstreamer
     json_t *current = json_object_get(root, "current");
-    if (!current || json_is_null(current)) {
-      if (gstreamer_pid != 0) {
-        INFO("Killing gstreamer process (pid %d)", gstreamer_pid);
-        kill(gstreamer_pid, SIGTERM);
-        gstreamer_pid = 0;
-      }
-    } else {
+    if (current && !json_is_null(current)) {
       // parse the stream configuration
       json_t *session_root = NULL;
       if (json_is_string(current) && strcmp("primary", json_string_value(current)) == 0) {
@@ -344,37 +321,15 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
       INFO("Delta - shadow state delta update: gateway_instance %s, stream_rtp_port %lld, stream_h264_bitrate %lld\n",
            json_string_value(gateway_instance), json_integer_value(stream_rtp_port),
            stream_h264_bitrate ? json_integer_value(stream_h264_bitrate) : 0);
-      int h264_bitrate = stream_h264_bitrate ? json_integer_value(stream_h264_bitrate) : 256;
+      int h264_bitrate = stream_h264_bitrate ? json_integer_value(stream_h264_bitrate) : default_h264_bitrate;
       const char *rtp_host = json_string_value(gateway_instance);
       int rtp_port = json_integer_value(stream_rtp_port);
 
-      // format gstreamer command-line arguments based on the stream configuration
-      char bitrate_arg[100];
-      snprintf(bitrate_arg, sizeof(bitrate_arg), "bitrate=%d", h264_bitrate);
-      char rtp_host_arg[100];
-      snprintf(rtp_host_arg, sizeof(rtp_host_arg), "host=%s", rtp_host);
-      char rtp_port_arg[100];
-      snprintf(rtp_port_arg, sizeof(rtp_port_arg), "port=%d", rtp_port);
-      const char *argv[] = {"gst-launch-1.0", "-e", "videotestsrc", "!", "timeoverlay", "!", "x264enc", bitrate_arg,
-                            "!", "video/x-h264,profile=baseline", "!", "rtph264pay", "config-interval=1", "pt=96",
-                            "!", "udpsink", rtp_host_arg, rtp_port_arg, NULL};
-      // if there's already a gstreamer running, kill it
-      if (gstreamer_pid != 0) {
-        INFO("Killing gstreamer process (pid %d)", gstreamer_pid);
-        kill(gstreamer_pid, SIGTERM);
-      }
-      // and then run the new one
-      if (0 == (gstreamer_pid = fork())) {
-        if (-1 == execvpe(argv[0], (char **)argv, NULL)) {
-          ERROR("Gstreamer execve failed [%m]");
-        }
-        exit(0);
-      }
-      INFO("Running gstreamer pid %d", gstreamer_pid);
-      free(prev_streams_json);
-      prev_streams_json = json_str_copy;
+      gst_update_stream_params(ctx->gst, h264_bitrate, rtp_host, rtp_port);
     }
-
+    else {
+      gst_update_stream_params(ctx->gst, default_h264_bitrate, "localhost", 20000);
+    }
     // release json object
     json_decref(root);
   }
