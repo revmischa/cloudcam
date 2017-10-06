@@ -4,7 +4,7 @@
 #include <gst/gst.h>
 
 // internal state for the GStreamer thread/pipeline
-typedef struct gst_thread_ctx {
+typedef struct ccgst_thread_ctx {
   pthread_t thread_id;
 
   // main loop
@@ -41,18 +41,18 @@ typedef struct gst_thread_ctx {
   char rtp_host[256];
   guint rtp_port;
   pthread_mutex_t params_mutex;
-} gst_thread_ctx;
+} ccgst_thread_ctx;
 
 // public interface
 
 // starts the GStreamer thread/stream
-void gst_start_stream(gst_thread_ctx *ctx);
+void ccgst_start_stream(ccgst_thread_ctx *ctx);
 
 // updates stream parameters; thread-safe
-void gst_update_stream_params(gst_thread_ctx *ctx, int h264_bitrate, const char *rtp_host, int rtp_port);
+void ccgst_update_stream_params(ccgst_thread_ctx *ctx, int h264_bitrate, const char *rtp_host, int rtp_port);
 
 // creates a jpeg snapshot of the next available frame
 // returned buffer must be released via free()
-void *gst_get_jpeg_snapshot(gst_thread_ctx *ctx, size_t *snapshot_size);
+void *ccgst_get_jpeg_snapshot(ccgst_thread_ctx *ctx, size_t *snapshot_size);
 
 #endif // CLOUDCAM_GST_H

@@ -6,7 +6,7 @@
 #include <curl/curl.h>
 #include "cloudcam/iot.h"
 #include "cloudcam/s3.h"
-#include "cloudcam/gst.h"
+#include "cloudcam/ccgst.h"
 #include "../config/aws_iot_config.h"
 
 // writes a string to the specified file, creating it if necessary
@@ -255,7 +255,7 @@ void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_l
 
     // upload stream snapshot to s3
     size_t snapshot_size = 0;
-    void *snapshot_data = gst_get_jpeg_snapshot(ctx->gst, &snapshot_size);
+    void *snapshot_data = ccgst_get_jpeg_snapshot(ctx->gst, &snapshot_size);
     if (snapshot_data != NULL && snapshot_size != 0) {
       rc = cloudcam_upload_buffer_to_s3_presigned(ctx, snapshot_data, snapshot_size, json_string_value(upload_url));
     }
@@ -325,10 +325,10 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
       const char *rtp_host = json_string_value(gateway_instance);
       int rtp_port = json_integer_value(stream_rtp_port);
 
-      gst_update_stream_params(ctx->gst, h264_bitrate, rtp_host, rtp_port);
+      ccgst_update_stream_params(ctx->gst, h264_bitrate, rtp_host, rtp_port);
     }
     else {
-      gst_update_stream_params(ctx->gst, default_h264_bitrate, "localhost", 20000);
+      ccgst_update_stream_params(ctx->gst, default_h264_bitrate, "localhost", 20000);
     }
     // release json object
     json_decref(root);

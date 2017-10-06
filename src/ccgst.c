@@ -5,11 +5,11 @@
 #include <assert.h>
 #include "cloudcam/cloudcam.h"
 #include "cloudcam/log.h"
-#include "cloudcam/gst.h"
+#include "cloudcam/ccgst.h"
 
 // creates a jpeg snapshot of the next available frame
 // returned buffer must be released via free()
-void *gst_get_jpeg_snapshot(gst_thread_ctx *ctx, size_t *snapshot_size)
+void *ccgst_get_jpeg_snapshot(ccgst_thread_ctx *ctx, size_t *snapshot_size)
 {
   assert(ctx != NULL);
   assert(snapshot_size != NULL);
@@ -38,7 +38,7 @@ static GstPadProbeReturn jpeg_sink_pad_probe_cb(GstPad          *pad,
                                                 GstPadProbeInfo *info,
                                                 gpointer         user_data)
 {
-  gst_thread_ctx *ctx = (gst_thread_ctx *)user_data;
+  ccgst_thread_ctx *ctx = (ccgst_thread_ctx *)user_data;
   assert(ctx != NULL);
   GstPadProbeReturn probe_return = GST_PAD_PROBE_DROP; // by default, drop the buffer
   pthread_mutex_lock(&ctx->snapshot_mutex);
@@ -57,7 +57,7 @@ static GstPadProbeReturn jpeg_src_pad_probe_cb(GstPad          *pad,
                                                GstPadProbeInfo *info,
                                                gpointer         user_data)
 {
-  gst_thread_ctx *ctx = (gst_thread_ctx *)user_data;
+  ccgst_thread_ctx *ctx = (ccgst_thread_ctx *)user_data;
   assert(ctx != NULL);
   GstMapInfo map;
   GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
@@ -87,34 +87,34 @@ static GstPadProbeReturn jpeg_src_pad_probe_cb(GstPad          *pad,
 }
 
 // updates stream parameters
-void gst_update_stream_params(gst_thread_ctx *ctx, int h264_bitrate, const char *rtp_host, int rtp_port) {
+void ccgst_update_stream_params(ccgst_thread_ctx *ctx, int h264_bitrate, const char *rtp_host, int rtp_port) {
   assert(ctx != NULL);
   assert(h264_bitrate != 0);
   assert(rtp_host != NULL);
   assert(rtp_port != 0);
   pthread_mutex_lock(&ctx->params_mutex);
-  // copy values into the gst_thread_ctx
+  // copy values into the ccgst_thread_ctx
   ctx->h264_bitrate = h264_bitrate;
   strncpy(ctx->rtp_host, rtp_host, sizeof(ctx->rtp_host));
   ctx->rtp_port = rtp_port;
   pthread_mutex_unlock(&ctx->params_mutex);
 }
 
-static gboolean gst_update_stream_params_cb(gpointer user_data) {
-  gst_thread_ctx *ctx = (gst_thread_ctx *)user_data;
+static gboolean update_stream_params_cb(gpointer user_data) {
+  ccgst_thread_ctx *ctx = (ccgst_thread_ctx *)user_data;
   assert(ctx != NULL);
   pthread_mutex_lock(&ctx->params_mutex);
   guint prev_h264_bitrate;
   g_object_get(G_OBJECT(ctx->x264enc), "bitrate", &prev_h264_bitrate, NULL);
   if (prev_h264_bitrate != ctx->h264_bitrate) {
-    INFO("gst_update_stream_params_cb(): bitrate: %dkbps", ctx->h264_bitrate);
+    INFO("update_stream_params_cb(): bitrate: %dkbps", ctx->h264_bitrate);
     g_object_set(G_OBJECT(ctx->x264enc), "bitrate", ctx->h264_bitrate, NULL);
   }
   gchar *prev_rtp_host;
   gint prev_rtp_port;
   g_object_get(G_OBJECT(ctx->udpsink), "host", &prev_rtp_host, "port", &prev_rtp_port, NULL);
   if (strcmp(prev_rtp_host, ctx->rtp_host) != 0 || prev_rtp_port != ctx->rtp_port) {
-    INFO("gst_update_stream_params_cb(): RTP sink: %s:%d", ctx->rtp_host, ctx->rtp_port);
+    INFO("update_stream_params_cb(): RTP sink: %s:%d", ctx->rtp_host, ctx->rtp_port);
     g_object_set(G_OBJECT(ctx->udpsink), "host", ctx->rtp_host, "port", (gint)ctx->rtp_port, NULL);
   }
   g_free(prev_rtp_host);
@@ -122,11 +122,11 @@ static gboolean gst_update_stream_params_cb(gpointer user_data) {
   return G_SOURCE_CONTINUE;
 }
 
-static void *gst_thread(void *param) {
-  gst_thread_ctx *ctx = (gst_thread_ctx *)param;
+static void *ccgst_thread_fn(void *param) {
+  ccgst_thread_ctx *ctx = (ccgst_thread_ctx *)param;
   assert(ctx != NULL);
 
-  // initialize gst_thread_ctx
+  // initialize ccgst_thread_ctx
   pthread_mutex_init(&ctx->snapshot_mutex, NULL);
   pthread_cond_init(&ctx->snapshot_cond, NULL);
   ctx->snapshot_buf = NULL;
@@ -196,7 +196,7 @@ static void *gst_thread(void *param) {
   }
 
   // run update_stream_params_cb every once in a while so stream params are updated in a thread-safe way
-  g_timeout_add(500, &gst_update_stream_params_cb, ctx);
+  g_timeout_add(500, &update_stream_params_cb, ctx);
 
   INFO("GStreamer pipeline started");
   g_main_loop_run(ctx->loop);
@@ -206,7 +206,7 @@ static void *gst_thread(void *param) {
 
   INFO("GStreamer pipeline finished");
 
-  // release remaining resources from the gst_thread_ctx
+  // release remaining resources from the ccgst_thread_ctx
   pthread_mutex_destroy(&ctx->params_mutex);
   pthread_mutex_lock(&ctx->snapshot_mutex);
   ctx->snapshot_buf_capacity = ctx->snapshot_size = 0;
@@ -220,11 +220,11 @@ static void *gst_thread(void *param) {
 }
 
 // starts the GStreamer thread/stream
-void gst_start_stream(gst_thread_ctx *ctx) {
+void ccgst_start_stream(ccgst_thread_ctx *ctx) {
   assert(ctx != NULL);
-  int r = pthread_create(&ctx->thread_id, NULL, &gst_thread, ctx);
+  int r = pthread_create(&ctx->thread_id, NULL, &ccgst_thread_fn, ctx);
   if (r != 0) {
-    ERROR("gst_start_stream(): pthread_create failed (%d)", r);
+    ERROR("ccgst_start_stream(): pthread_create failed (%d)", r);
     return;
   }
 }

@@ -13,7 +13,7 @@
 #include <fcntl.h>
 #include <curl/curl.h>
 #include "aws_iot_mqtt_client_interface.h"
-#include "cloudcam/gst.h"
+#include "cloudcam/ccgst.h"
 
 // represents a cloudcam client context
 typedef struct {
@@ -25,7 +25,7 @@ typedef struct {
     char *client_crt_path;
     char *client_key_path;
     AWS_IoT_Client *iotc;
-    gst_thread_ctx *gst;
+    ccgst_thread_ctx *gst;
 } cloudcam_ctx;
 
 // public functions
