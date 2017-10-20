@@ -3,8 +3,15 @@
 # SET CONFIG VARS FIRST before calling this script
 # (see deploy-stack-dev.sh)
 
+# try to find aws region and account id
 if [[ -n "$AWS_DEFAULT_REGION" ]]; then
-  AWS_REGION?=$AWS_DEFAULT_REGION
+  AWS_REGION="${AWS_REGION:-$AWS_DEFAULT_REGION}"
+fi
+if [[ -z "$AWS_REGION"]]; then
+  AWS_REGION=`aws configure get region`
+fi
+if [[ -z "$AWS_ACCOUNT_ID" ]]; then
+  AWS_ACCOUNT_ID=`aws sts get-caller-identity --output text --query 'Account'`
 fi
 
 # sanity-check for presence of required configuration variables

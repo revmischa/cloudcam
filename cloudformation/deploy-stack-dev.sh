@@ -7,7 +7,4 @@ CLOUDFRONT_UI_DISTRIBUTION_ID=E3RT8HOQAAG0IG   # ui cloudfront distribution id
 JANUS_KMS_KEY_USER=cloudcam-ops   # user which is granted permission to encrypt Janus SSL key via encrypt-ssl-key.sh
 JANUS_HEALTH_CHECK_ALARMS_TOPIC=JanusHealthCheckAlarms   # topic for janus gateway health check alarms
 
-AWS_REGION=`aws configure get region`
-AWS_ACCOUNT_ID=`aws sts get-caller-identity --output text --query 'Account'`
-
 source deploy-stack.sh
