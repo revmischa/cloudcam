@@ -26,6 +26,7 @@ if [[ $MISSING ]]; then
   exit 1
 fi
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # note: Route53 health check notifications require that the Cloudwatch alarm and SNS topic reside in the us-east-1 region
 #       since multi-region cloudformation templates are complicated, we create them using the aws cli here
@@ -36,8 +37,8 @@ JANUS_HEALTH_CHECK_ALARMS_ENDPOINT_ARN=arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUN
 aws s3 mb s3://${S3_CODE_BUCKET}
 
 # package and deploy the stack
-aws cloudformation package --template-file cloudcam.yml --s3-bucket ${S3_CODE_BUCKET} --output-template-file cloudcam-packaged.yml
-aws cloudformation deploy --template-file cloudcam-packaged.yml \
+aws cloudformation package --template-file cloudcam.yml --s3-bucket ${S3_CODE_BUCKET} --output-template-file DIR/cloudcam-packaged.yml
+aws cloudformation deploy --template-file $DIR/cloudcam-packaged.yml \
     --stack-name ${STACK_NAME} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
     --parameter-overrides JanusKmsKeyUser=${JANUS_KMS_KEY_USER}
 
@@ -49,7 +50,7 @@ aws sns subscribe --region us-east-1 --topic-arn ${JANUS_HEALTH_CHECK_ALARMS_TOP
 if [[ -n "$S3_UI_BUCKET" ]]; then
   # upload UI assets to S3_UI_BUCKET
   ( cd ../dev-ui && NODE_ENV=production webpack )
-  aws s3 cp --recursive --acl public-read ../dev-ui/webroot s3://${S3_UI_BUCKET}
+  aws s3 cp --recursive --acl public-read $DEV/../dev-ui/webroot s3://${S3_UI_BUCKET}
   # invalidate cloudfront
   if [[ -n "$CLOUDFRONT_UI_DISTRIBUTION_ID" ]]; then
     aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_UI_DISTRIBUTION_ID} --paths '/*'
