@@ -27,4 +27,5 @@ else
   exit 1
 fi
 
-./deploy-stack.sh
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+$DIR/deploy-stack.sh
