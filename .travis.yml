@@ -1,0 +1,33 @@
+env:
+  global:
+  - AWS_REGION=eu-central-1
+  - CF_TEMPLATE=cloudformation/cloudcam.yml
+language: python
+python:
+- '3.6'
+script:
+- aws cloudformation validate-template --template-body file://$CF_TEMPLATE
+- yaml-lint $CF_TEMPLATE
+before_install:
+- echo "Installing AWS CLI"
+- pip install --upgrade --user awscli
+- echo "Installing test gems"
+- gem install yaml-lint
+install: true
+before_deploy:
+- pip install -r requirements.txt
+deploy:
+  provider: script
+  script: cloudformation/deploy-stack-travis.sh
+  on:
+    branch: master
+  access_key_id: access_key_id
+  secret_access_key:
+    secure: E4G/9L33ubZjPFZD8RhHHb+/9Dhm+z7URkN0Ci4vORUutrnqD2U5ywuDWQPcYzVx9O6RWw4lbXZZG8AMjz56nxZquWLtFT99kQM60cdHwgIgvqvRyKApMmA3tqcBqQiltbWq+sBKPUYchxdWpLdNAniVnjK1VOP3INZU6LP8qMEOjHRt8LhEhK7+unJHXUFTSGVBaUARGONb+/oAv2Ef4jtl9AZEisgW5w8qHyNLWYKzPO2vBUNZrM6sD4WUE4uVanyA970D6ECcNal1FHBjOOl65pnoxbyh2JPfyrY4yZhPg7ZogPmoECSJKoH/y2M4eot/LIzDmNNzEBQwj9b7w+zD5+i+sRQuEWnpsoOy+EiKROdq9f0Ici09JCJHHfdXTohlaIs+rUFCHs94HupmP1tYgZlH2FxYOP6d79D2DVCOandiTN16t/D540o+mtwbM+HO7D5YUg0b9LeC0ntHDIKzC8CHruzefMCQ3+8H1pdOg0mfxcCN0uKoy/0QOxIatFz8YI4qWPcQTM9me1+pOJ1Yv0d1UAXsAiQ1387nKv5TWm4tR+bKN7Z/edtybavHa3W5k5tDKgfH+MUMeS6kbX3MPGY7wILAoi5wJ75lzzCYmrIXSbaOADBy8M+z52EncyzCPF8dTPaq9Mfar3pV9gwX0jM1wADBkSPyN4Pg4gc=
+after_success:
+- echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
+- echo "Cloudformation template validated"
+- echo "YAML linted"
+notifications:
+  slack:
+    secure: T1Sjah6WQxvW1w6jLZqBzZmCY5aXTzGaWwB0G+dcSP/2qS5M7WiSXq6WwC6Y5bSQxmhhmxGMIaC9NiSASr2dgawY62lzdH++tWHQcikjR9eOKCKgZngtgSXl61Hr2wr3kb7xoqmPMIvg5H0/hThM6+196fScIuTXWJVloh5L2LkDkpn7/KpBlM8/CpMrXIx30Ugwii/5ehRTSlWpgYAjit79LcddK9f+X+gesNDk4ji8HDhWZjUkJgTcPEHkZZxc5OlMu1Zil1VpD6Df8n9ppjTKq3znUHrs0bba3mDcPHMBH07GC/6QNoVDXgevfPJG6y4acnF56DZBpwJ7i7E5oUGdHzafU7BfXShU2pqt9SCdH/BtrSULd8x580W3G1qGqPZIgDFktTy1wUxanFff2RF75FDQ0PxCxmmzy1VyOm9Bc4gq4CkEEOc1fw+af3NhRYlj2rcW1fSXOUJ3zfamTH4Ib5XGcG/fh772hBmOyDg+aFidadVXPOEVKzjmHLKBTJv1rTxX/epudW/oMR6bMl2LSRcRXC1TCN68BBeTgzoziVUgxzo1fnCU8MUDNTowPQ1tKCO69sg40UP0Ljtfla2/LMspm9KXWq1D8KEczwUpNQXMDdg+Mjj23BN0U9xz0jB4Ut3JJ53LPR8O4LWyA7+k6Au5dpJrVADJ//kMiRw=
