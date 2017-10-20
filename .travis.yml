@@ -10,7 +10,7 @@ script:
 - yaml-lint $CF_TEMPLATE
 before_install:
 - echo "Installing AWS CLI"
-- pip install --upgrade --user awscli
+- pip install --upgrade awscli
 - echo "Installing test gems"
 - gem install yaml-lint
 install: true
