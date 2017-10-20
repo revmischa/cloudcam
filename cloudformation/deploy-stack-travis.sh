@@ -9,7 +9,7 @@ if [[ -z "$TRAVIS_BRANCH" ]]; then
 fi
 
 # check where we're deploying to
-if [[ "$TRAVIS_BRANCH" eq "master" ]]; then
+if [[ "$TRAVIS_BRANCH" -eq "master" ]]; then
   echo "* on master branch"
   echo "* deploying dev CloudFormation stack..."
   configure_dev()
