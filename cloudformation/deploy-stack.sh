@@ -3,6 +3,10 @@
 # SET CONFIG VARS FIRST before calling this script
 # (see deploy-stack-dev.sh)
 
+if [[ -n "$AWS_DEFAULT_REGION" ]]; then
+  AWS_REGION?=$AWS_DEFAULT_REGION
+fi
+
 # sanity-check for presence of required configuration variables
 MISSING=
 for config in STACK_NAME S3_CODE_BUCKET AWS_REGION JANUS_KMS_KEY_USER JANUS_HEALTH_CHECK_ALARMS_TOPIC AWS_ACCOUNT_ID; do

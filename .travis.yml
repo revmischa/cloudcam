@@ -1,6 +1,6 @@
 env:
   global:
-  - AWS_REGION=eu-central-1 CF_TEMPLATE=cloudformation/cloudcam.yml
+  - AWS_DEFAULT_REGION=eu-central-1 CF_TEMPLATE=cloudformation/cloudcam.yml
 language: python
 python:
 - '3.6'
