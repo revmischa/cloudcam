@@ -7,7 +7,7 @@
 if [[ -n "$AWS_DEFAULT_REGION" ]]; then
   AWS_REGION="${AWS_REGION:-$AWS_DEFAULT_REGION}"
 fi
-if [[ -z "$AWS_REGION"]]; then
+if [[ -z "$AWS_REGION" ]]; then
   AWS_REGION=`aws configure get region`
 fi
 if [[ -z "$AWS_ACCOUNT_ID" ]]; then
