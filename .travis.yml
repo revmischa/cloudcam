@@ -26,5 +26,10 @@ after_success:
 - echo "Cloudformation template validated"
 - echo "YAML linted"
 notifications:
+  email:
+    on_success: never
+    on_failure: change
   slack:
+    on_success: change
+    on_failure: always
     secure: T1Sjah6WQxvW1w6jLZqBzZmCY5aXTzGaWwB0G+dcSP/2qS5M7WiSXq6WwC6Y5bSQxmhhmxGMIaC9NiSASr2dgawY62lzdH++tWHQcikjR9eOKCKgZngtgSXl61Hr2wr3kb7xoqmPMIvg5H0/hThM6+196fScIuTXWJVloh5L2LkDkpn7/KpBlM8/CpMrXIx30Ugwii/5ehRTSlWpgYAjit79LcddK9f+X+gesNDk4ji8HDhWZjUkJgTcPEHkZZxc5OlMu1Zil1VpD6Df8n9ppjTKq3znUHrs0bba3mDcPHMBH07GC/6QNoVDXgevfPJG6y4acnF56DZBpwJ7i7E5oUGdHzafU7BfXShU2pqt9SCdH/BtrSULd8x580W3G1qGqPZIgDFktTy1wUxanFff2RF75FDQ0PxCxmmzy1VyOm9Bc4gq4CkEEOc1fw+af3NhRYlj2rcW1fSXOUJ3zfamTH4Ib5XGcG/fh772hBmOyDg+aFidadVXPOEVKzjmHLKBTJv1rTxX/epudW/oMR6bMl2LSRcRXC1TCN68BBeTgzoziVUgxzo1fnCU8MUDNTowPQ1tKCO69sg40UP0Ljtfla2/LMspm9KXWq1D8KEczwUpNQXMDdg+Mjj23BN0U9xz0jB4Ut3JJ53LPR8O4LWyA7+k6Au5dpJrVADJ//kMiRw=
