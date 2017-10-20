@@ -21,7 +21,7 @@ configure_dev() {
 if [[ "$TRAVIS_BRANCH" -eq "master" ]]; then
   echo "* on master branch"
   echo "* deploying dev CloudFormation stack..."
-  configure_dev()
+  configure_dev
 else
   echo "ERROR: unknown branch for deployment: $TRAVIS_BRANCH"
   exit 1
