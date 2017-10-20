@@ -9,10 +9,8 @@ python:
 script:
 - aws cloudformation validate-template --template-body file://$CF_TEMPLATE
 - yamllint -c .yamllint $CF_TEMPLATE
-before_install:
-- echo "Installing AWS CLI"
+install:
 - pip install --upgrade awscli yamllint
-install: false
 before_deploy:
 - pip install -r requirements.txt
 deploy:
