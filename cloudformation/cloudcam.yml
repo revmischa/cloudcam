@@ -1,3 +1,4 @@
+---
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Resources:
@@ -180,9 +181,9 @@ Resources:
   CognitoClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-        ClientName: !Sub '${AWS::StackName}UserPoolClient'
-        GenerateSecret: false
-        UserPoolId: !Ref CognitoUserPool
+      ClientName: !Sub '${AWS::StackName}UserPoolClient'
+      GenerateSecret: false
+      UserPoolId: !Ref CognitoUserPool
 
   IotAttachThingPolicyLambdaRole:
     Type: AWS::IAM::Role
