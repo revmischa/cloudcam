@@ -11,8 +11,6 @@ script:
 - yamllint -c .yamllint $CF_TEMPLATE
 install:
 - pip install --upgrade awscli yamllint
-before_deploy:
-- pip install -r requirements.txt
 deploy:
   provider: script
   script: cloudformation/deploy-stack-travis.sh
