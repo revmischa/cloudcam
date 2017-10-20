@@ -69,38 +69,38 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-          Version: 2012-10-17
-          Statement:
-            - Effect: Allow
-              Principal:
-                Federated: cognito-identity.amazonaws.com
-              Action:
-                - sts:AssumeRoleWithWebIdentity
-              Condition:
-                StringEquals:
-                  'cognito-identity.amazonaws.com:aud': !Ref CognitoIdentityPool
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref CognitoIdentityPool
       Policies:
         - PolicyName: !Sub '${AWS::StackName}-CognitoWebRole'
           PolicyDocument:
-              Version: 2012-10-17
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - iot:Connect
-                    - iot:Subscribe
-                    - iot:Publish
-                    - iot:Receive
-                  Resource: '*'
-                - Effect: Allow
-                  Action:
-                    - lambda:InvokeFunction
-                  Resource:
-                    - !GetAtt [IotAttachThingPolicyLambda, Arn]
-                    - !GetAtt [IotProvisionThingLambda, Arn]
-                    - !GetAtt [IotListThingsLambda, Arn]
-                    - !GetAtt [JanusStartStreamLambda, Arn]
-                    - !GetAtt [JanusStopStreamLambda, Arn]
-                    - !GetAtt [ThumbStoreLambda, Arn]
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iot:Connect
+                  - iot:Subscribe
+                  - iot:Publish
+                  - iot:Receive
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt [IotAttachThingPolicyLambda, Arn]
+                  - !GetAtt [IotProvisionThingLambda, Arn]
+                  - !GetAtt [IotListThingsLambda, Arn]
+                  - !GetAtt [JanusStartStreamLambda, Arn]
+                  - !GetAtt [JanusStopStreamLambda, Arn]
+                  - !GetAtt [ThumbStoreLambda, Arn]
   CognitoIdentityPool:
     Type: AWS::Cognito::IdentityPool
     Properties:

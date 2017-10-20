@@ -6,7 +6,7 @@ python:
 - '3.6'
 script:
 - aws cloudformation validate-template --template-body file://$CF_TEMPLATE
-- yamllint $CF_TEMPLATE
+- yamllint -c .yamllint $CF_TEMPLATE
 before_install:
 - echo "Installing AWS CLI"
 - pip install --upgrade awscli yamllint
