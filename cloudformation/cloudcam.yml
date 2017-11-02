@@ -512,7 +512,7 @@ Resources:
             Resource: '*'
           - Effect: Allow
             Principal:
-              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:user/${JanusKmsKeyUser}'
+              AWS: !Sub '${JanusKmsKeyUserArn}'
             Action:
               - kms:Encrypt
             Resource: '*'
@@ -533,7 +533,6 @@ Parameters:
   UiBucketName:
     Type: String
     Description: 'S3 UI bucket name. Must be the same as the UI domain name for CNAME redirect to work'
-    Default: beta.cloudcam.space
   JanusCertPem:
     Type: String
     Description: 'Janus gateway SSL cert PEM'
@@ -561,19 +560,16 @@ Parameters:
   JanusHostedZoneId:
     Type: String
     Description: 'AWS Hosted Zone Id where Janus instances will receive DNS names'
-    Default: Z1MUZ3ZP15MONF
   JanusHostedZoneDomain:
     Type: String
     Description: 'AWS Hosted Zone domain where Janus instances will receive DNS names'
-    Default: cloudcam.space
   JanusInstanceNamePrefix:
     Type: String
     Description: 'Janus instance/dns name prefix'
     Default: ls-janus
-  JanusKmsKeyUser:
+  JanusKmsKeyUserArn:
     Type: String
-    Description: 'User name to grant rights to use Janus SSL KMS key for signing'
-    Default: cloudcam-ops
+    Description: 'ARN of the user to grant rights to use Janus SSL KMS key for signing'
 
 Outputs:
   IdentityPoolId:

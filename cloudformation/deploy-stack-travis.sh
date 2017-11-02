@@ -12,7 +12,8 @@ configure_dev() {
   STACK_NAME=cloudcam-dev               # stack name
   S3_CODE_BUCKET=cloudcam-cf-dev        # s3 bucket to upload lambda code to, will be created if doesn't exist
   S3_UI_BUCKET=ccdev.mvstg.biz          # ui bucket
-  JANUS_KMS_KEY_USER=cloudcam-ops-dev   # user which is granted permission to encrypt Janus SSL key via encrypt-ssl-key.sh
+  JANUS_HOSTED_ZONE_ID=Z1MUZ3ZP15MONF            # aws hosted zone id where janus instances will receive dns names
+  JANUS_HOSTED_ZONE_DOMAIN=cloudcam.space        # aws hosted zone domain where janus instances will receive dns names
   JANUS_HEALTH_CHECK_ALARMS_TOPIC=JanusHealthCheckAlarms-Dev   # topic for janus gateway health check alarms
   # CLOUDFRONT_UI_DISTRIBUTION_ID=EXXXXXXX   # ui cloudfront distribution id
 }
