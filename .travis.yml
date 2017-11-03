@@ -7,7 +7,7 @@ language: python
 python:
 - '3.6'
 script:
-- aws cloudformation validate-template --template-body file://$CF_TEMPLATE
+- if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
 - yamllint -c .yamllint $CF_TEMPLATE
 install:
 - pip install --upgrade awscli yamllint
