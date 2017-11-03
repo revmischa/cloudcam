@@ -3,6 +3,12 @@
 # SET CONFIG VARS FIRST before calling this script
 # (see deploy-stack-dev.sh)
 
+# check if aws_access_key_id is present so we can continue, otherwise terminate without error
+if [[ -z `aws configure get aws_access_key_id` ]]; then
+  echo Missing aws_access_key_id; skipping the deployment
+  exit
+fi
+
 # try to find aws region and account id
 if [[ -n "$AWS_DEFAULT_REGION" ]]; then
   AWS_REGION="${AWS_REGION:-$AWS_DEFAULT_REGION}"
