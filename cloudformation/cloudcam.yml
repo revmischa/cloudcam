@@ -533,14 +533,6 @@ Parameters:
   UiBucketName:
     Type: String
     Description: 'S3 UI bucket name. Must be the same as the UI domain name for CNAME redirect to work'
-  JanusCertPem:
-    Type: String
-    Description: 'Janus gateway SSL cert PEM'
-    Default: ''
-  JanusCertKey:
-    Type: String
-    Description: 'Janus gateway SSL cert KEY'
-    Default: ''
   LightsailAzs:
     Type: String
     Description: 'Lightsail Janus gateway instance availability zone'
