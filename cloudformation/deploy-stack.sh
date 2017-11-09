@@ -52,11 +52,26 @@ aws cloudformation deploy --template-file $DIR/cloudcam-packaged.yml \
     --parameter-overrides UiBucketName=${S3_UI_BUCKET} JanusKmsKeyUserArn=${JANUS_KMS_KEY_USER_ARN} \
     JanusHostedZoneId=${JANUS_HOSTED_ZONE_ID} JanusHostedZoneDomain=${JANUS_HOSTED_ZONE_DOMAIN}
 
-echo UI URL: $(aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`UiUrl`].OutputValue' --output text)
+UI_URL=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`UiUrl`].OutputValue' --output text)
+AWS_IDENTITYPOOL=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`IdentityPoolId`].OutputValue' --output text)
+AWS_USERPOOL=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`UserPoolName`].OutputValue' --output text)
+AWS_CLIENTAPP=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`UserPoolClientName`].OutputValue' --output text)
+AWS_IOT_ENDPOINT=$(aws iot describe-endpoint --output text)
 
 # add an SNS subscription for Janus gateway Route53 health checks (see above on why is this not a part of the Cloudformation stack)
 aws sns subscribe --region us-east-1 --topic-arn ${JANUS_HEALTH_CHECK_ALARMS_TOPIC_ARN} --protocol lambda \
     --notification-endpoint ${JANUS_HEALTH_CHECK_ALARMS_ENDPOINT_ARN} --output text
+
+echo UI URL: ${UI_URL}
+
+# generate .env file to pass various config options to the UI
+cat > ../dev-ui/.env <<EOL
+AWS_REGION=${AWS_REGION}
+AWS_IDENTITYPOOL=${AWS_IDENTITYPOOL}
+AWS_USERPOOL=${AWS_USERPOOL}
+AWS_CLIENTAPP=${AWS_CLIENTAPP}
+AWS_IOT_ENDPOINT=${AWS_IOT_ENDPOINT}
+EOL
 
 # upload UI
 if [[ -n "$S3_UI_BUCKET" ]]; then

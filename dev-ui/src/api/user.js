@@ -14,7 +14,7 @@ export let cognitoUser = null
 AWS.config.region = process.env.AWS_REGION
 
 const userPool = new CognitoUserPool({
-  UserPoolId: process.env.AWS_USERPOOL,
+  UserPoolId: process.env.AWS_USERPOOL.split("/")[1],
   ClientId: process.env.AWS_CLIENTAPP
 })
 
@@ -69,7 +69,7 @@ export function login(form) {
           IdentityPoolId: process.env.AWS_IDENTITYPOOL,
           Logins: {}
         };
-        params.Logins['cognito-idp.' + process.env.AWS_REGION + '.amazonaws.com/' + process.env.AWS_USERPOOL] = result.getIdToken().getJwtToken()
+        params.Logins[process.env.AWS_USERPOOL] = result.getIdToken().getJwtToken()
         console.log('AWS CognitoIdentityCredentials params:' + JSON.stringify(params));
         var credentials = new AWS.CognitoIdentityCredentials(params);
         credentials.clearCachedId();
