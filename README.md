@@ -22,7 +22,7 @@ There is full support for embedded linux. Video streaming will be done with gstr
 ### Setting up AWS infrastructure
 1. Install AWS CLI and authenticate 
 2. Run `cd cloudformation && ./deploy-stack.sh`
-3. (optional) Run `cd cloudformation && ./encrypt-ssl-key.sh` to encrypt the SSL private key (`certs/$domain/server.key`) for the Janus gateway subdomain with the key managed by the AWS KMS and replace the `janus_encrypted_ssl_key_pem` value in `janus_scale_lightsail.py` with the result (note: this must be run as either as AWS root user or user specified in JANUS_KMS_KEY_USER in step 2) 
+3. (optional) Run `cd cloudformation && ./encrypt-ssl-key.sh` to encrypt the SSL private key (`certs/$domain/server.key`) for the Janus gateway subdomain with the key managed by the AWS KMS and replace the `janus_encrypted_ssl_key_pem` value in `janus_scale_lightsail.py` with the result (note: this must be run as either as AWS root user or user specified in JANUS_KMS_KEY_USER_ARN in step 2) 
 
 
 ### Architecture
