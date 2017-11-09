@@ -76,7 +76,7 @@ EOL
 # upload UI
 if [[ -n "$S3_UI_BUCKET" ]]; then
   # upload UI assets to S3_UI_BUCKET
-  ( cd ../dev-ui && NODE_ENV=production webpack > /dev/null )
+  ( cd ../dev-ui && npm install && NODE_ENV=production webpack > /dev/null )
   aws s3 cp --recursive --acl public-read $DIR/../dev-ui/webroot s3://${S3_UI_BUCKET}
   # invalidate cloudfront
   if [[ -n "$CLOUDFRONT_UI_DISTRIBUTION_ID" ]]; then
