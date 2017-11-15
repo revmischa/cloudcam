@@ -25,16 +25,13 @@ def handler(event, context):
     for thing_name in thing_names:
         # note: security is handled by AWS IoT policies attached to the
         # Cognito identity, so we don't perform any checks here
-        iot_data.update_thing_shadow(
-            thingName=thing_name,
-            payload=json.dumps({'state': {
-                'desired': {
-                    'thumb_upload': {
-                        'upload_url': gen_upload_url(thing_name),
-                        'download_url': gen_download_url(thing_name)
-                    }
-                }
-            }}).encode('utf-8'))
+        iot_data.publish(
+            topic=f'cloudcam/{thing_name}/commands',
+            qos=1,
+            payload=json.dumps({'command': 'upload_thumb',
+                                'upload_url': gen_upload_url(thing_name),
+                                'download_url': gen_download_url(thing_name)
+                                }).encode('utf-8'))
     return {}
 
 

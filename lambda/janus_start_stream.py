@@ -176,7 +176,7 @@ def handler(event, context):
     logger.info(json.dumps(thing_shadow, indent=2))
 
     # retrieve currently allocated stream info
-    streams = thing_shadow['state']['desired'].get('streams') or {}
+    streams = thing_shadow['state'].get('desired', {}).get('streams') or {}
 
     # get a list of available Janus instances
     janus_instances = get_janus_instances()

@@ -44,7 +44,6 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-
   while (1) {
     // mainloop
     cloudcam_iot_poll_loop(&ctx);
@@ -105,6 +104,7 @@ IoT_Error_t cloudcam_connect_blocking(cloudcam_ctx *ctx) {
 IoT_Error_t cloudcam_free_ctx(cloudcam_ctx *ctx) {
   free(ctx->app_dir_path);
   free(ctx->thing_name);
+  free(ctx->commands_topic_name);
   free(ctx->client_id);
   free(ctx->endpoint);
   free(ctx->ca_path);
