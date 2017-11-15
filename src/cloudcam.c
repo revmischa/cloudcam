@@ -39,6 +39,12 @@ int main(int argc, char **argv) {
 
   ccgst_start_stream(ctx.gst);
 
+  IoT_Error_t rc = cloudcam_init_iot_client(&ctx);
+  if (rc != SUCCESS) {
+    WARN("cloudcam_init_iot_client failed, exiting")
+    return rc;
+  }
+
   if (cloudcam_connect_blocking(&ctx) != SUCCESS) {
     ERROR("Failed to connect to AWSIoT service");
     return 2;
@@ -46,8 +52,15 @@ int main(int argc, char **argv) {
 
   while (1) {
     // mainloop
-    cloudcam_iot_poll_loop(&ctx);
-    // todo: investigate reconnection failures
+    rc = cloudcam_iot_poll_loop(&ctx);
+    if (rc >= 0) {
+      INFO("Exiting the main loop due to status %d", rc);
+      break;
+    }
+    else if (rc != FAILURE) {
+      // if rc indicates failure and it's not FAILURE (-1), which is returned on aws_iot_shadow_yield timeout (60s), try to reconnect
+      cloudcam_connect_blocking(&ctx);
+    }
   }
 
   // cleanup
@@ -76,13 +89,13 @@ IoT_Error_t cloudcam_init_ctx(cloudcam_ctx *ctx, char *app_dir_path) {
 
 // block until client is connected
 IoT_Error_t cloudcam_connect_blocking(cloudcam_ctx *ctx) {
-  assert(ctx->iotc);
-  assert(ctx->app_dir_path);
+  assert(ctx != NULL);
+  assert(ctx->app_dir_path != NULL);
 
-  // attempt connect
   IoT_Error_t rc;
+  // attempt connect
   do {
-    rc = cloudcam_init_iot_client(ctx);
+    rc = cloudcam_iot_connect(ctx);
     if (rc != SUCCESS) {
       WARN("Failed to connect, will retry...")
       sleep(10);

@@ -28,8 +28,6 @@ IoT_Error_t spit(const char *path, const char *str) {
 
 IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   assert(ctx != NULL);
-  AWS_IoT_Client *iotc = ctx->iotc;
-  assert(iotc != NULL);
   char *dir = dirname(ctx->app_dir_path);
   DEBUG("current dir: %s\n", dir);
   DEBUG("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
@@ -86,6 +84,12 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   // release the config_root
   json_decref(config_root);
 
+  return SUCCESS;
+}
+
+IoT_Error_t cloudcam_iot_connect(cloudcam_ctx *ctx) {
+  assert(ctx != NULL);
+
   // init shadow client and MQTT client
   ShadowInitParameters_t shadow_init_params = ShadowInitParametersDefault;
   shadow_init_params.pHost = ctx->endpoint;
@@ -96,7 +100,7 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   shadow_init_params.enableAutoReconnect = false;
   shadow_init_params.disconnectHandler = cloudcam_iot_disconnect_handler;
   DEBUG("Shadow Init");
-  IoT_Error_t rc = aws_iot_shadow_init(iotc, &shadow_init_params);
+  IoT_Error_t rc = aws_iot_shadow_init(ctx->iotc, &shadow_init_params);
   if (rc != SUCCESS) {
     ERROR("Shadow init error %d", rc);
     return rc;
@@ -108,7 +112,7 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   scp.pMqttClientId = ctx->client_id;
   scp.mqttClientIdLen = (uint16_t)strlen(ctx->client_id);
   DEBUG("Shadow Connect");
-  rc = aws_iot_shadow_connect(iotc, &scp);
+  rc = aws_iot_shadow_connect(ctx->iotc, &scp);
   if (SUCCESS != rc) {
     ERROR("Shadow Connection Error: %d", rc);
     return rc;
@@ -118,11 +122,12 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
    *  #AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL
    *  #AWS_IOT_MQTT_MAX_RECONNECT_WAIT_INTERVAL
    */
-  rc = aws_iot_shadow_set_autoreconnect_status(iotc, true);
+  rc = aws_iot_shadow_set_autoreconnect_status(ctx->iotc, true);
   if (SUCCESS != rc) {
     ERROR("Unable to set Auto Reconnect to true - %d", rc);
     return rc;
   }
+  DEBUG("cloudcam_iot_connect: done");
   return SUCCESS;
 }
 
@@ -165,18 +170,23 @@ IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx) {
 }
 
 // sit and wait for messages
-void cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
+IoT_Error_t cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
   assert(ctx != NULL);
 
   IoT_Error_t rc;
   do {
-    rc = aws_iot_shadow_yield(ctx->iotc, 60000);
+    rc = aws_iot_shadow_yield(ctx->iotc, 5000);
     if (rc == NETWORK_ATTEMPTING_RECONNECT) {
       DEBUG("Attempting reconnect\n");
       sleep(1);
       continue;
     }
-    if (rc < 0) {
+    else if (rc == FAILURE) {
+      DEBUG("aws_iot_shadow_yield timeout\n");
+      sleep(1);
+      continue;
+    }
+    else if (rc < 0) {
       ERROR("Shadow yield error. Likely unexpected TCP socket disconnect. Error: %d", rc);
       sleep(2);
       break;
@@ -185,6 +195,8 @@ void cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
   } while (rc >= 0);
 
   DEBUG("Finished poll loop rc=%d\n", rc);
+
+  return rc;
 }
 
 void shadow_update_callback(const char *pThingName, ShadowActions_t action, Shadow_Ack_Status_t status,
@@ -347,6 +359,17 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
     else {
       ccgst_update_stream_params(ctx->gst, default_h264_bitrate, "localhost", 20000);
     }
+    // todo: update the shadow with actual gateway params
+//    char json_buf[AWS_IOT_MQTT_TX_BUF_LEN];
+//    snprintf(json_buf, sizeof(json_buf),
+//             "{\"state\":{\"reported\":{\"thumb_upload\":{\"upload_url\":\"%s\",\"download_url\":\"%s\",\"status\":\"%s\",\"timestamp\":%ld}}}}",
+//             ctx->gst->h264_bitrate, ctx->gst->rtp_host, ctx->gst->rtp_port);
+//    DEBUG("shadow update json: %s\n", json_buf);
+//    rc = aws_iot_shadow_update(ctx->iotc, ctx->thing_name, json_buf, shadow_update_callback, ctx, 30, 1);
+//    if (rc < 0) {
+//      ERROR("Shadow update error: %d", rc);
+//    }
+
     // release json object
     json_decref(root);
   }

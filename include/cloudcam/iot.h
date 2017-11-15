@@ -23,7 +23,8 @@ void cloudcam_iot_disconnect_handler(AWS_IoT_Client *, void *);
 
 // setup funcs
 IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx);
-void cloudcam_iot_poll_loop(cloudcam_ctx *ctx);
+IoT_Error_t cloudcam_iot_connect(cloudcam_ctx *ctx);
+IoT_Error_t cloudcam_iot_poll_loop(cloudcam_ctx *ctx);
 IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx);
 
 #endif // CLOUDCAM_IOT_H
