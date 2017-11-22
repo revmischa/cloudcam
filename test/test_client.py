@@ -327,6 +327,7 @@ def test_thumbnail_upload(test_params, cloudcam_client, mqtt_client, shadow_stat
 
 def test_rtp_streaming(test_params, cloudcam_client, mqtt_client, shadow_state, gst_rtp_pipeline):
     """Tests thumbnail uploads by setting up a local http server and verifying that uploaded data is a valid JPEG image"""
+    shadow_state.shadow_version += 1
     mqtt_client.publish(test_params.shadow_delta_topic, json.dumps({
         'state': {
             'desired': {
@@ -340,7 +341,7 @@ def test_rtp_streaming(test_params, cloudcam_client, mqtt_client, shadow_state, 
                 }
             }
         },
-        'version': ++shadow_state.shadow_version
+        'version': shadow_state.shadow_version
     }))
     if not gst_rtp_pipeline.completion_event.wait(test_params.timeout):
         raise TimeoutException()
