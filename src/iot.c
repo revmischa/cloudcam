@@ -28,11 +28,9 @@ IoT_Error_t spit(const char *path, const char *str) {
 
 IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   assert(ctx != NULL);
-  AWS_IoT_Client *iotc = ctx->iotc;
-  assert(iotc != NULL);
   char *dir = dirname(ctx->app_dir_path);
-  INFO("current dir: %s\n", dir);
-  INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
+  DEBUG("current dir: %s\n", dir);
+  DEBUG("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
   char config_path[PATH_MAX + 1];
   snprintf(config_path, sizeof(config_path), "%s/%s", dir, AWS_IOT_CONFIG_FILENAME);
@@ -61,7 +59,10 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   ctx->client_id = strdup(json_string_value(client_id));
   ctx->endpoint = strdup(json_string_value(endpoint));
 
-  INFO("\nthing name: %s\nclient id: %s\nendpoint: %s\n", ctx->thing_name, ctx->client_id, ctx->endpoint);
+  DEBUG("\nthing name: %s\nclient id: %s\nendpoint: %s\n", ctx->thing_name, ctx->client_id, ctx->endpoint);
+
+  ctx->commands_topic_name = malloc(256);
+  snprintf(ctx->commands_topic_name, 256, "cloudcam/%s/commands", ctx->thing_name);
 
   ctx->ca_path = malloc(PATH_MAX);
   snprintf(ctx->ca_path, PATH_MAX, "%s/%s", dir, AWS_IOT_ROOT_CA_FILENAME);
@@ -83,6 +84,12 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   // release the config_root
   json_decref(config_root);
 
+  return SUCCESS;
+}
+
+IoT_Error_t cloudcam_iot_connect(cloudcam_ctx *ctx) {
+  assert(ctx != NULL);
+
   // init shadow client and MQTT client
   ShadowInitParameters_t shadow_init_params = ShadowInitParametersDefault;
   shadow_init_params.pHost = ctx->endpoint;
@@ -92,8 +99,8 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   shadow_init_params.pRootCA = ctx->ca_path;
   shadow_init_params.enableAutoReconnect = false;
   shadow_init_params.disconnectHandler = cloudcam_iot_disconnect_handler;
-  INFO("Shadow Init");
-  IoT_Error_t rc = aws_iot_shadow_init(iotc, &shadow_init_params);
+  DEBUG("Shadow Init");
+  IoT_Error_t rc = aws_iot_shadow_init(ctx->iotc, &shadow_init_params);
   if (rc != SUCCESS) {
     ERROR("Shadow init error %d", rc);
     return rc;
@@ -104,8 +111,8 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
   scp.pMyThingName = ctx->thing_name;
   scp.pMqttClientId = ctx->client_id;
   scp.mqttClientIdLen = (uint16_t)strlen(ctx->client_id);
-  INFO("Shadow Connect");
-  rc = aws_iot_shadow_connect(iotc, &scp);
+  DEBUG("Shadow Connect");
+  rc = aws_iot_shadow_connect(ctx->iotc, &scp);
   if (SUCCESS != rc) {
     ERROR("Shadow Connection Error: %d", rc);
     return rc;
@@ -115,11 +122,12 @@ IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx) {
    *  #AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL
    *  #AWS_IOT_MQTT_MAX_RECONNECT_WAIT_INTERVAL
    */
-  rc = aws_iot_shadow_set_autoreconnect_status(iotc, true);
+  rc = aws_iot_shadow_set_autoreconnect_status(ctx->iotc, true);
   if (SUCCESS != rc) {
     ERROR("Unable to set Auto Reconnect to true - %d", rc);
     return rc;
   }
+  DEBUG("cloudcam_iot_connect: done");
   return SUCCESS;
 }
 
@@ -131,24 +139,17 @@ static cloudcam_ctx *delta_handler_ctx = NULL;
 IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx) {
   assert(ctx != NULL);
 
+  // subscribe to commands topic
+  DEBUG("Subscribing to %s", ctx->commands_topic_name);
+  IoT_Error_t rc = aws_iot_mqtt_subscribe(ctx->iotc, ctx->commands_topic_name, strlen(ctx->commands_topic_name), 1, &cloudcam_iot_command_handler, (void*)ctx);
+  if (SUCCESS != rc) {
+    ERROR("Failed to subscribe to commands topic (%d)", rc);
+    return rc;
+  }
+
+  // assign delta_handler_ctx (see above on why it is a static variable)
   assert(delta_handler_ctx == NULL || delta_handler_ctx == ctx);
   delta_handler_ctx = ctx;
-
-  // subscribe to thumb upload shadow deltas (thumb_upload key)
-  static char thumb_upload_delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
-  static jsonStruct_t thumb_upload_delta = {
-    .cb = shadow_thumb_upload_delta_handler,
-    .pData = thumb_upload_delta_buffer,
-    .pKey = "thumb_upload",
-    .type = SHADOW_JSON_OBJECT
-  };
-
-  IoT_Error_t rc = aws_iot_shadow_register_delta(ctx->iotc, &thumb_upload_delta);
-  if (SUCCESS != rc) {
-    ERROR("Shadow Register Delta Error");
-  } else {
-    INFO("Registered for thumb_upload shadow delta updates");
-  }
 
   // subscribe to a/v streams shadow deltas (streams key)
   static char streams_delta_buffer[SHADOW_MAX_SIZE_OF_RX_BUFFER];
@@ -161,26 +162,31 @@ IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx) {
 
   rc = aws_iot_shadow_register_delta(ctx->iotc, &streams_delta);
   if (SUCCESS != rc) {
-    ERROR("Shadow Register Delta Error");
+    ERROR("Shadow Register Delta Error (%d)", rc);
   } else {
-    INFO("Registered for streams shadow delta updates");
+    DEBUG("Registered for streams shadow delta updates");
   }
   return rc;
 }
 
 // sit and wait for messages
-void cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
+IoT_Error_t cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
   assert(ctx != NULL);
 
   IoT_Error_t rc;
   do {
-    rc = aws_iot_shadow_yield(ctx->iotc, 200);
+    rc = aws_iot_shadow_yield(ctx->iotc, 5000);
     if (rc == NETWORK_ATTEMPTING_RECONNECT) {
-      INFO("Attempting reconnect\n");
+      DEBUG("Attempting reconnect\n");
       sleep(1);
       continue;
     }
-    if (rc < 0) {
+    else if (rc == FAILURE) {
+      DEBUG("aws_iot_shadow_yield timeout\n");
+      sleep(1);
+      continue;
+    }
+    else if (rc < 0) {
       ERROR("Shadow yield error. Likely unexpected TCP socket disconnect. Error: %d", rc);
       sleep(2);
       break;
@@ -188,7 +194,9 @@ void cloudcam_iot_poll_loop(cloudcam_ctx *ctx) {
     sleep(1);
   } while (rc >= 0);
 
-  INFO("Finished poll loop rc=%d\n", rc);
+  DEBUG("Finished poll loop rc=%d\n", rc);
+
+  return rc;
 }
 
 void shadow_update_callback(const char *pThingName, ShadowActions_t action, Shadow_Ack_Status_t status,
@@ -197,7 +205,7 @@ void shadow_update_callback(const char *pThingName, ShadowActions_t action, Shad
   assert(pReceivedJsonDocument != NULL);
   //cloudcam_ctx *ctx = (cloudcam_ctx *)pContextData;
   //assert(ctx != NULL);
-  INFO("shadow_update_callback(%s, %d, %d): received %s\n", pThingName, action, status, pReceivedJsonDocument);
+  DEBUG("shadow_update_callback(%s, %d, %d): received %s\n", pThingName, action, status, pReceivedJsonDocument);
 }
 
 // downloads an url to a specified file (via curl)
@@ -224,58 +232,79 @@ IoT_Error_t download_file(const char *url, const char *path) {
   return SUCCESS;
 }
 
-// thumb upload delta handler (thumb_upload key)
-void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js) {
-  cloudcam_ctx *ctx = delta_handler_ctx;
+static void thumb_upload_command_handler(cloudcam_ctx *ctx, json_t *root) {
+  json_t *upload_url = json_object_get(root, "upload_url");
+  if (upload_url == NULL || !json_is_string(upload_url)) {
+    ERROR("error: payload missing string 'upload_url' key\n");
+    return;
+  }
+  json_t *download_url = json_object_get(root, "download_url");
+  if (download_url == NULL || !json_is_string(download_url)) {
+    ERROR("error: payload missing string 'download_url' key\n");
+    return;
+  }
+
+  DEBUG("thumb_upload_command_handler: download_url %s\n", json_string_value(download_url));
+  IoT_Error_t rc = 0;
+
+  // upload stream snapshot to s3
+  size_t snapshot_size = 0;
+  void *snapshot_data = ccgst_get_jpeg_snapshot(ctx->gst, &snapshot_size);
+  if (snapshot_data != NULL && snapshot_size != 0) {
+    rc = cloudcam_upload_buffer_to_s3_presigned(ctx, snapshot_data, snapshot_size, json_string_value(upload_url));
+  }
+  free(snapshot_data);
+
+  // update device shadow with the result
+  char json_buf[AWS_IOT_MQTT_TX_BUF_LEN];
+  snprintf(json_buf, sizeof(json_buf),
+           "{\"state\":{\"reported\":{\"last_uploaded_thumb\":{\"upload_url\":\"%s\",\"download_url\":\"%s\",\"status\":\"%s\",\"timestamp\":%ld}}}}",
+           json_string_value(upload_url), json_string_value(download_url), rc < 0 ? "failure" : "success",
+           (unsigned long)time(NULL));
+  DEBUG("shadow update json: %s\n", json_buf);
+  rc = aws_iot_shadow_update(ctx->iotc, ctx->thing_name, json_buf, shadow_update_callback, ctx, 30, 1);
+  if (rc < 0) {
+    ERROR("Shadow update error: %d", rc);
+  }
+}
+
+// cloudcam iot command handler
+void cloudcam_iot_command_handler(AWS_IoT_Client *pClient, char *pTopicName, uint16_t topicNameLen, IoT_Publish_Message_Params *pParams, void *pClientData) {
+  cloudcam_ctx *ctx = (cloudcam_ctx *)pClientData;
   assert(ctx != NULL);
+  assert(pParams != NULL);
+  assert(pParams->payload != NULL);
 
-  INFO("shadow_thumb_upload_delta_handler");
+  DEBUG("cloudcam_iot_command_handler");
 
-  if (json_str && json_str_len > 0 && js) {
-    // parse json under "upload_url" key
+  if (pParams->payloadLen > 0) {
+    // parse json
     json_error_t json_error;
-    json_t *root = json_loadb(json_str, json_str_len, 0, &json_error);
+    json_t *root = json_loadb(pParams->payload, pParams->payloadLen, 0, &json_error);
     if (root == NULL) {
       ERROR("error: payload parsing error: %s at %s\n", json_error.text, json_error.source);
       return;
     }
-    json_t *upload_url = json_object_get(root, "upload_url");
-    if (upload_url == NULL) {
-      ERROR("error: payload missing 'upload_url' key\n");
+    json_t *command = json_object_get(root, "command");
+    if (command == NULL || !json_is_string(command)) {
+      ERROR("error: payload missing string 'command' key\n");
+      // release json object
+      json_decref(root);
       return;
     }
-    json_t *download_url = json_object_get(root, "download_url");
-    if (download_url == NULL) {
-      ERROR("error: payload missing 'download_url' key\n");
-      return;
+    DEBUG("cloudcam_iot_command_handler: %s", json_string_value(command));
+    // call the command handler
+    if (strcmp(json_string_value(command), "upload_thumb") == 0) {
+      thumb_upload_command_handler(ctx, root);
     }
-    INFO("Delta - shadow state delta update: download_url %s\n", json_string_value(download_url));
-
-    IoT_Error_t rc = 0;
-
-    // upload stream snapshot to s3
-    size_t snapshot_size = 0;
-    void *snapshot_data = ccgst_get_jpeg_snapshot(ctx->gst, &snapshot_size);
-    if (snapshot_data != NULL && snapshot_size != 0) {
-      rc = cloudcam_upload_buffer_to_s3_presigned(ctx, snapshot_data, snapshot_size, json_string_value(upload_url));
+    else {
+      ERROR("error: unknown iot command %s\n", json_string_value(command));
     }
-    free(snapshot_data);
-
-    // update device shadow with the result
-    char json_buf[AWS_IOT_MQTT_TX_BUF_LEN];
-    snprintf(json_buf, sizeof(json_buf),
-             "{\"state\":{\"reported\":{\"thumb_upload\":{\"upload_url\":\"%s\",\"download_url\":\"%s\",\"status\":\"%s\",\"timestamp\":%ld}}}}",
-             json_string_value(upload_url), json_string_value(download_url), rc < 0 ? "failure" : "success",
-             (unsigned long)time(NULL));
-    INFO("shadow update json: %s\n", json_buf);
-    rc = aws_iot_shadow_update(ctx->iotc, ctx->thing_name, json_buf, shadow_update_callback, ctx, 30, 1);
-    if (rc < 0) {
-      ERROR("Shadow update error: %d", rc);
-    }
-
     // release json object
     json_decref(root);
   }
+
+  DEBUG("cloudcam_iot_command_handler: done");
 }
 
 // a/v streams delta handler (streams key)
@@ -283,8 +312,8 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
   cloudcam_ctx *ctx = delta_handler_ctx;
   assert(ctx != NULL);
 
-  INFO("shadow_streams_delta_handler");
-  INFO("%.*s", json_str_len, json_str);
+  DEBUG("shadow_streams_delta_handler");
+  DEBUG("%.*s", json_str_len, json_str);
 
   const int default_h264_bitrate = 256;
 
@@ -318,7 +347,7 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
         return;
       }
       json_t *stream_h264_bitrate = json_object_get(session_root, "stream_h264_bitrate");
-      INFO("Delta - shadow state delta update: gateway_instance %s, stream_rtp_port %lld, stream_h264_bitrate %lld\n",
+      DEBUG("Delta - shadow state delta update: gateway_instance %s, stream_rtp_port %lld, stream_h264_bitrate %lld\n",
            json_string_value(gateway_instance), json_integer_value(stream_rtp_port),
            stream_h264_bitrate ? json_integer_value(stream_h264_bitrate) : 0);
       int h264_bitrate = stream_h264_bitrate ? json_integer_value(stream_h264_bitrate) : default_h264_bitrate;
@@ -330,6 +359,17 @@ void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, j
     else {
       ccgst_update_stream_params(ctx->gst, default_h264_bitrate, "localhost", 20000);
     }
+    // todo: update the shadow with actual gateway params
+//    char json_buf[AWS_IOT_MQTT_TX_BUF_LEN];
+//    snprintf(json_buf, sizeof(json_buf),
+//             "{\"state\":{\"reported\":{\"thumb_upload\":{\"upload_url\":\"%s\",\"download_url\":\"%s\",\"status\":\"%s\",\"timestamp\":%ld}}}}",
+//             ctx->gst->h264_bitrate, ctx->gst->rtp_host, ctx->gst->rtp_port);
+//    DEBUG("shadow update json: %s\n", json_buf);
+//    rc = aws_iot_shadow_update(ctx->iotc, ctx->thing_name, json_buf, shadow_update_callback, ctx, 30, 1);
+//    if (rc < 0) {
+//      ERROR("Shadow update error: %d", rc);
+//    }
+
     // release json object
     json_decref(root);
   }

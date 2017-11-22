@@ -122,11 +122,11 @@ export function subscribeToShadowUpdates(thingName) {
 function shadowUpdateHandler(thingName, doc) {
   // if thing uploaded a new thumbnail to S3, get the download url and dispatch redux update for it
   if (doc.state.reported &&
-    doc.state.reported.thumb_upload &&
-    doc.state.reported.thumb_upload.status === "success") {
-    console.log("new " + thingName + " thumb available at " + doc.state.reported.thumb_upload.download_url);
+    doc.state.reported.last_uploaded_thumb &&
+    doc.state.reported.last_uploaded_thumb.status === "success") {
+    console.log("new " + thingName + " thumb available at " + doc.state.reported.last_uploaded_thumb.download_url);
     store.dispatch({
-      type: 'iot/thumb', thingName: thingName, thumbUrl: doc.state.reported.thumb_upload.download_url
+      type: 'iot/thumb', thingName: thingName, thumbUrl: doc.state.reported.last_uploaded_thumb.download_url
     })
   }
 }

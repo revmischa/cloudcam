@@ -19,6 +19,7 @@
 typedef struct {
     char *app_dir_path;
     char *thing_name;
+    char *commands_topic_name;
     char *client_id;
     char *endpoint;
     char *ca_path;

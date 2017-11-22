@@ -17,13 +17,14 @@
 extern const char *CLOUDCAM_TOPIC_THUMBNAIL_TEST;
 
 // callback handlers
-void shadow_thumb_upload_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js);
+void cloudcam_iot_command_handler(AWS_IoT_Client *pClient, char *pTopicName, uint16_t topicNameLen, IoT_Publish_Message_Params *pParams, void *pClientData);
 void shadow_streams_delta_handler(const char *json_str, uint32_t json_str_len, jsonStruct_t *js);
 void cloudcam_iot_disconnect_handler(AWS_IoT_Client *, void *);
 
 // setup funcs
 IoT_Error_t cloudcam_init_iot_client(cloudcam_ctx *ctx);
-void cloudcam_iot_poll_loop(cloudcam_ctx *ctx);
+IoT_Error_t cloudcam_iot_connect(cloudcam_ctx *ctx);
+IoT_Error_t cloudcam_iot_poll_loop(cloudcam_ctx *ctx);
 IoT_Error_t cloudcam_iot_subscribe(cloudcam_ctx *ctx);
 
 #endif // CLOUDCAM_IOT_H

@@ -104,14 +104,18 @@ def handler(event, context):
                 "iot:Publish",
                 "iot:Receive"
             ],
-            "Resource": [f"arn:aws:iot:{region}:{account_id}:topic/$aws/things/{thing_name}/shadow/*"]
+            "Resource": [f"arn:aws:iot:{region}:{account_id}:topic/$aws/things/{thing_name}/shadow/*",
+                         f"arn:aws:iot:{region}:{account_id}:topic/cloudcam/{thing_name}/commands",
+                         f"arn:aws:iot:{region}:{account_id}:topic/cloudcam/{thing_name}/notifications"]
         }, {
             "Effect": "Allow",
             "Action": [
                 "iot:Subscribe",
                 "iot:Receive"
             ],
-            "Resource": [f"arn:aws:iot:{region}:{account_id}:topicfilter/$aws/things/{thing_name}/shadow/*"]
+            "Resource": [f"arn:aws:iot:{region}:{account_id}:topicfilter/$aws/things/{thing_name}/shadow/*",
+                         f"arn:aws:iot:{region}:{account_id}:topicfilter/cloudcam/{thing_name}/commands",
+                         f"arn:aws:iot:{region}:{account_id}:topicfilter/cloudcam/{thing_name}/notifications"]
         }]
     }
 

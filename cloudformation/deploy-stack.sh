@@ -73,10 +73,12 @@ AWS_CLIENTAPP=${AWS_CLIENTAPP}
 AWS_IOT_ENDPOINT=${AWS_IOT_ENDPOINT}
 EOL
 
+# webpack the UI code
+( cd ../dev-ui && npm install && NODE_ENV=production webpack > /dev/null )
+
 # upload UI
 if [[ -n "$S3_UI_BUCKET" ]]; then
   # upload UI assets to S3_UI_BUCKET
-  ( cd ../dev-ui && npm install && NODE_ENV=production webpack > /dev/null )
   aws s3 cp --recursive --acl public-read $DIR/../dev-ui/webroot s3://${S3_UI_BUCKET}
   # invalidate cloudfront
   if [[ -n "$CLOUDFRONT_UI_DISTRIBUTION_ID" ]]; then
