@@ -9,13 +9,13 @@ python:
 script:
 #  - if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
   - yamllint -c .yamllint $CF_TEMPLATE
-  - (cd client/rust && cargo build)
+  - (source ~/.cargo/env && cd client/rust && cargo build)
   - (cd client/c && make all)
   - pytest test
 install:
   - pip install --upgrade awscli yamllint
-  - curl https://sh.rustup.rs -sSf | sudo sh -s -- -y
-  - sudo apt-get install build-essential
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y
+  - sudo apt-get install build-essential gstreamer1.0 python-gst-1.0
   - pip install -U pytest
 deploy:
   provider: script
