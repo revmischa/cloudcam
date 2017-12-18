@@ -5,12 +5,18 @@ env:
   - secure: K40hJ/lR8KRBEUGsfIQ+n7fTPaSlrIiSj2Nz8e/jH6djSeP/iZHTMkQyfQXMFxB0nIrBbyRpGgcc6k9J6x31i8qq3peWVRBVtuwc50mses6zzo28OTSSEW9/VnD3YTIyP5DBNbHh217Xt9m2zXQ/I5O9pHEsjSWsh1CVfko/IOIA4eKQoncTbog5ymgAzDB266WX8wL2qCUXaeiDRMOiIJuyDLmDMlKrZOwXbQ58voIZ8MFlHk2yd9Gl97UZbW2skGxRlWWqH0426QNrYOMiDwMhzM3VkKrbi5lRvlzyVg5EKUJoTIxxk74p7kYI8gTBwFrfbjL/gvz4aeThOk5O3muYnz2C7nYj/2XcNHdtcW22CR19qwI6r4muGafSnkXDOTzbGSaawl0x9PA+2PvsB0LGTBwakfQbwzRnJolhk0KX4TzdPamYIBfBEF5aMPi3Cg63h1LkeQzwEPFAz8T2QJNrZvsdWEf5IdBa9MlOOxHYcIFHL22NYw0xnrFPV2L5ALdH4qNxUQ+WRUlHzFURWNWTKKke89FqkXxHB0aGzyrdBI2ldB16QWpDy9N7d9sgqpQ6eqfjfo7j6ZCGh8Cm8f41Cm+VyTNrpBai+iiycNDrDiSRQVGr6yggXSBEInUjoeHy3e1eb/hbf7EEkAuYegthElo7Ochy94xnsNEtIF8=
 language: python
 python:
-- '3.6'
+  - '3.6'
 script:
-- if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
-- yamllint -c .yamllint $CF_TEMPLATE
+#  - if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
+  - yamllint -c .yamllint $CF_TEMPLATE
+  - (cd client/rust && cargo build)
+  - (cd client/c && make all)
+  - pytest test
 install:
-- pip install --upgrade awscli yamllint
+  - pip install --upgrade awscli yamllint
+  - curl https://sh.rustup.rs -sSf | sh
+  - sudo apt-get install build-essential
+  - pip install -U pytest
 deploy:
   provider: script
   script: cloudformation/deploy-stack-travis.sh
@@ -20,14 +26,14 @@ deploy:
   secret_access_key:
     secure: $AWS_SECRET_ACCESS_KEY
 after_success:
-- echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
-- echo "Cloudformation template validated"
-- echo "YAML linted"
-notifications:
-  email:
-    on_success: never
-    on_failure: change
-  slack:
-    on_success: change
-    on_failure: always
-    secure: T1Sjah6WQxvW1w6jLZqBzZmCY5aXTzGaWwB0G+dcSP/2qS5M7WiSXq6WwC6Y5bSQxmhhmxGMIaC9NiSASr2dgawY62lzdH++tWHQcikjR9eOKCKgZngtgSXl61Hr2wr3kb7xoqmPMIvg5H0/hThM6+196fScIuTXWJVloh5L2LkDkpn7/KpBlM8/CpMrXIx30Ugwii/5ehRTSlWpgYAjit79LcddK9f+X+gesNDk4ji8HDhWZjUkJgTcPEHkZZxc5OlMu1Zil1VpD6Df8n9ppjTKq3znUHrs0bba3mDcPHMBH07GC/6QNoVDXgevfPJG6y4acnF56DZBpwJ7i7E5oUGdHzafU7BfXShU2pqt9SCdH/BtrSULd8x580W3G1qGqPZIgDFktTy1wUxanFff2RF75FDQ0PxCxmmzy1VyOm9Bc4gq4CkEEOc1fw+af3NhRYlj2rcW1fSXOUJ3zfamTH4Ib5XGcG/fh772hBmOyDg+aFidadVXPOEVKzjmHLKBTJv1rTxX/epudW/oMR6bMl2LSRcRXC1TCN68BBeTgzoziVUgxzo1fnCU8MUDNTowPQ1tKCO69sg40UP0Ljtfla2/LMspm9KXWq1D8KEczwUpNQXMDdg+Mjj23BN0U9xz0jB4Ut3JJ53LPR8O4LWyA7+k6Au5dpJrVADJ//kMiRw=
+  - echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
+#  - echo "Cloudformation template validated"
+  - echo "YAML linted"
+#notifications:
+#  email:
+#    on_success: never
+#    on_failure: change
+#  slack:
+#    on_success: change
+#    on_failure: always
+#    secure: T1Sjah6WQxvW1w6jLZqBzZmCY5aXTzGaWwB0G+dcSP/2qS5M7WiSXq6WwC6Y5bSQxmhhmxGMIaC9NiSASr2dgawY62lzdH++tWHQcikjR9eOKCKgZngtgSXl61Hr2wr3kb7xoqmPMIvg5H0/hThM6+196fScIuTXWJVloh5L2LkDkpn7/KpBlM8/CpMrXIx30Ugwii/5ehRTSlWpgYAjit79LcddK9f+X+gesNDk4ji8HDhWZjUkJgTcPEHkZZxc5OlMu1Zil1VpD6Df8n9ppjTKq3znUHrs0bba3mDcPHMBH07GC/6QNoVDXgevfPJG6y4acnF56DZBpwJ7i7E5oUGdHzafU7BfXShU2pqt9SCdH/BtrSULd8x580W3G1qGqPZIgDFktTy1wUxanFff2RF75FDQ0PxCxmmzy1VyOm9Bc4gq4CkEEOc1fw+af3NhRYlj2rcW1fSXOUJ3zfamTH4Ib5XGcG/fh772hBmOyDg+aFidadVXPOEVKzjmHLKBTJv1rTxX/epudW/oMR6bMl2LSRcRXC1TCN68BBeTgzoziVUgxzo1fnCU8MUDNTowPQ1tKCO69sg40UP0Ljtfla2/LMspm9KXWq1D8KEczwUpNQXMDdg+Mjj23BN0U9xz0jB4Ut3JJ53LPR8O4LWyA7+k6Au5dpJrVADJ//kMiRw=
