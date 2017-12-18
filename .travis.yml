@@ -14,7 +14,7 @@ script:
   - pytest test
 install:
   - pip install --upgrade awscli yamllint
-  - curl https://sh.rustup.rs -sSf | sh
+  - curl https://sh.rustup.rs -sSf | sudo sh -s -- -y
   - sudo apt-get install build-essential
   - pip install -U pytest
 deploy:
