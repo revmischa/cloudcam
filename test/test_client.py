@@ -152,7 +152,7 @@ def mqtt_client(test_params, mqtt_broker, shadow_state):
 @pytest.fixture(scope="session")
 def cloudcam_client(test_params, mqtt_broker):
     print("launching cloudcam client..")
-    with open('config.json', 'w') as f:
+    with open('./client/c/config.json', 'w') as f:
         json.dump({
             "thingName": test_params.thing_name,
             "thingTypeName": "Camera",

@@ -1,6 +1,10 @@
+sudo: required
+services:
+  - docker
 env:
   global:
   - AWS_DEFAULT_REGION=eu-central-1 CF_TEMPLATE=cloudformation/cloudcam.yml
+  - TOOLS_IMAGE=somebodyelse/cloudcam:travis-ci-work
   - secure: F6TIHOy75Zj+F3SB+MZcOoVL7fhHYOAuT2o1Wex37DhsilWOOgRC3yKAg90iJyROBSik9MeJtO2xJo/thh4fE7X3eFdjY8SRAP/tSh/racK0LpLIagRnM6KrmRYqd1Yi+AWv7GyQpceg/eriNYqt78LEudfV/2oxybhioCV7+B5jg82BNF1fbYdQiJkf6p+ZMGD4vvauUT64iExRu0dbsGuqBJw+mYHOgAgChqJd9iNjBdhJ/N7tCQOoNEN9rHyXfNia1BVnK6BlYsUJBth6jA4eTT9WgZGUmwdXKDvEetWTWSud6+VdpRfENa14BTV9oUR4xb3ynz2rtzqnu/YY6DhkRBPWRHZOPXf4gB/KwPAAKfdNkM56B/DNDLA+aYfCQ/qEnpd/C/yLFdZeG9LtH32I+fwd+Q06m2ifVym3/fKEz9EkMM5jBxuICY3+8EZ8LcaHEKdnHI0UyWcrHY+CiJ0BLu1L/VCER3yC/4UBezzviZm+X75sVfa7jNVDlgQtmlBa/cQ/irYTpRkxeplnNgyNU+f9dsVCq0OeyV8C9PpAtA6NNHQ8TFIB93Iz0XbfaB5pE/W9rgyBIIIdCmuXdl1WVNIgFF6RQvmpBEPRWC6RkNYkb7J11iT1AFShXbb8n2nFfC8XOLEotP5d9qKEGTUPz418ErlFIIwOMQJr6mU=
   - secure: K40hJ/lR8KRBEUGsfIQ+n7fTPaSlrIiSj2Nz8e/jH6djSeP/iZHTMkQyfQXMFxB0nIrBbyRpGgcc6k9J6x31i8qq3peWVRBVtuwc50mses6zzo28OTSSEW9/VnD3YTIyP5DBNbHh217Xt9m2zXQ/I5O9pHEsjSWsh1CVfko/IOIA4eKQoncTbog5ymgAzDB266WX8wL2qCUXaeiDRMOiIJuyDLmDMlKrZOwXbQ58voIZ8MFlHk2yd9Gl97UZbW2skGxRlWWqH0426QNrYOMiDwMhzM3VkKrbi5lRvlzyVg5EKUJoTIxxk74p7kYI8gTBwFrfbjL/gvz4aeThOk5O3muYnz2C7nYj/2XcNHdtcW22CR19qwI6r4muGafSnkXDOTzbGSaawl0x9PA+2PvsB0LGTBwakfQbwzRnJolhk0KX4TzdPamYIBfBEF5aMPi3Cg63h1LkeQzwEPFAz8T2QJNrZvsdWEf5IdBa9MlOOxHYcIFHL22NYw0xnrFPV2L5ALdH4qNxUQ+WRUlHzFURWNWTKKke89FqkXxHB0aGzyrdBI2ldB16QWpDy9N7d9sgqpQ6eqfjfo7j6ZCGh8Cm8f41Cm+VyTNrpBai+iiycNDrDiSRQVGr6yggXSBEInUjoeHy3e1eb/hbf7EEkAuYegthElo7Ochy94xnsNEtIF8=
 language: python
@@ -9,14 +13,12 @@ python:
 script:
 #  - if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
   - yamllint -c .yamllint $CF_TEMPLATE
-  - (source ~/.cargo/env && cd client/rust && cargo build)
-  - (cd client/c && make all)
-  - pytest test
+  - docker run -v .:/cloudcam $TOOLS_IMAGE /bin/sh -c "source ~/.cargo/env && cd /cloudcam/client/rust && cargo build"
+  - docker run -v .:/cloudcam $TOOLS_IMAGE /bin/sh -c "cd /cloudcam/client/c && make all"
+  - docker run -v .:/cloudcam $TOOLS_IMAGE /bin/sh -c "cd /cloudcam && pytest test"
 install:
   - pip install --upgrade awscli yamllint
-  - curl https://sh.rustup.rs -sSf | sh -s -- -y
-  - sudo apt-get install build-essential libcurl4-openssl-dev gstreamer1.0 python-gst-1.0 mosquitto
-  - pip install -U pytest paho-mqtt Pillow cherrypy
+  - docker pull $TOOLS_IMAGE
 deploy:
   provider: script
   script: cloudformation/deploy-stack-travis.sh
