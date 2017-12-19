@@ -66,7 +66,7 @@ $(BUILT_AWS_LIB): $(AWS_OBJS) | $(TLS_LIB_FILES)
 	touch $(BUILT_AWS_LIB)
 # make libcurl
 $(BUILT_LIBCURL): $(TLS_LIB_FILES) 
-	cd $(LIBCURL_DIR) && ./configure --disable-shared --without-ssl --with-mbedtls=$(PWD)/vendor/${MBEDTLS_DIR}/build --prefix=$(PWD)/vendor/$(LIBCURL_DIR)/build
+	cd $(LIBCURL_DIR) && ./configure --disable-shared --without-ssl --without-librtmp --disable-ldap --with-mbedtls=$(PWD)/vendor/${MBEDTLS_DIR}/build --prefix=$(PWD)/vendor/$(LIBCURL_DIR)/build
 	make -C $(LIBCURL_DIR) -j3
 	make -C $(LIBCURL_DIR) install
 	touch $(BUILT_LIBCURL)
