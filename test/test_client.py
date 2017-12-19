@@ -6,6 +6,7 @@ import string
 import subprocess
 import time
 import threading
+import os
 from functools import partial
 import paho.mqtt.client as mqtt
 import cherrypy
@@ -15,20 +16,10 @@ import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import GObject, Gst
 
-# running the tests:
-#   cd ${CLOUDCAM_ROOT} && pytest test
-
-# dependencies:
-#   pip3 install pytest
-#   pip3 install paho-mqtt
-#   pip3 install Pillow
-#   pip3 install cherrypy
-#   apt-get install mosquitto
-#   apt-get install python-gst-1.0
-#   runnable cloudcam client binary (./cloudcam)
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+cloudcam_client_path = os.environ.get('CLOUDCAM_CLIENT', './client/c/cloudcam')
 
 
 def rand_string(size=12, chars=string.ascii_uppercase + string.ascii_uppercase + string.digits):
@@ -152,7 +143,7 @@ def mqtt_client(test_params, mqtt_broker, shadow_state):
 @pytest.fixture(scope="session")
 def cloudcam_client(test_params, mqtt_broker):
     print("launching cloudcam client..")
-    with open('./client/c/config.json', 'w') as f:
+    with open(os.path.join(os.path.split(cloudcam_client_path)[0], 'config.json'), 'w') as f:
         json.dump({
             "thingName": test_params.thing_name,
             "thingTypeName": "Camera",
@@ -162,7 +153,7 @@ def cloudcam_client(test_params, mqtt_broker):
             "certificatePem": open(test_params.client_cert_path, 'r').read(),
             "certificatePrivateKey": open(test_params.client_key_path, 'r').read()
         }, f)
-    client_proc = subprocess.Popen('./client/c/cloudcam')
+    client_proc = subprocess.Popen(cloudcam_client_path)
     # wait until client connects to mqtt broker and subscribes to relevant topics
     time.sleep(5)
     yield client_proc
