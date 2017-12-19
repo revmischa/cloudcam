@@ -162,7 +162,7 @@ def cloudcam_client(test_params, mqtt_broker):
             "certificatePem": open(test_params.client_cert_path, 'r').read(),
             "certificatePrivateKey": open(test_params.client_key_path, 'r').read()
         }, f)
-    client_proc = subprocess.Popen('./cloudcam')
+    client_proc = subprocess.Popen('./client/c/cloudcam')
     # wait until client connects to mqtt broker and subscribes to relevant topics
     time.sleep(5)
     yield client_proc

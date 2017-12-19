@@ -15,8 +15,8 @@ script:
 install:
   - pip install --upgrade awscli yamllint
   - curl https://sh.rustup.rs -sSf | sh -s -- -y
-  - sudo apt-get install build-essential libcurl4-openssl-dev gstreamer1.0 python-gst-1.0
-  - pip install -U pytest
+  - sudo apt-get install build-essential libcurl4-openssl-dev gstreamer1.0 python-gst-1.0 mosquitto
+  - pip install -U pytest paho-mqtt Pillow cherrypy
 deploy:
   provider: script
   script: cloudformation/deploy-stack-travis.sh
