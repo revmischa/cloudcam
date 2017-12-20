@@ -1,4 +1,4 @@
-use futures::Future;
+use futures::{Future, Stream};
 use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_io::codec::{Framed, Encoder, Decoder};
 use tokio_core::net::TcpStream;
@@ -6,11 +6,11 @@ use tokio_core::reactor::{Handle, Core};
 use tokio_proto::TcpClient;
 use tokio_proto::pipeline::{ClientProto, ClientService};
 use tokio_service::Service;
+use tokio_timer::{Timer, TimerError};
 use hyper::Uri;
 use std::time::Duration;
 use bytes::BytesMut;
 use std::{io, str};
-use std::thread;
 use std::string::String;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use nom::{digit, space, IResult};
@@ -24,8 +24,8 @@ pub enum Header {
     },
     Generic {
         name: String,
-        value: String
-    }
+        value: String,
+    },
 }
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ pub struct Request {
     uri: String,
     version: (u32, u32),
     headers: Vec<Header>,
-    body: Vec<u8>
+    body: Vec<u8>,
 }
 
 impl Request {
@@ -46,7 +46,7 @@ impl Request {
             headers: vec![
                 Header::Generic { name: "CSeq".to_string(), value: c_seq.to_string() }
             ],
-            body: vec![]
+            body: vec![],
         }
     }
 
@@ -58,7 +58,7 @@ impl Request {
             headers: vec![
                 Header::Generic { name: "CSeq".to_string(), value: c_seq.to_string() }
             ],
-            body: vec![]
+            body: vec![],
         }
     }
 
@@ -71,7 +71,7 @@ impl Request {
                 Header::Generic { name: "CSeq".to_string(), value: c_seq.to_string() },
                 Header::Generic { name: "Transport".to_string(), value: transport.to_string() }
             ],
-            body: vec![]
+            body: vec![],
         }
     }
 
@@ -82,9 +82,10 @@ impl Request {
             version: (1, 0),
             headers: vec![
                 Header::Generic { name: "CSeq".to_string(), value: c_seq.to_string() },
-                Header::Generic { name: "Session".to_string(), value: session }
+                Header::Generic { name: "Session".to_string(), value: session },
+                Header::Generic { name: "Range".to_string(), value: "npt=0.000-".to_string() }
             ],
-            body: vec![]
+            body: vec![],
         }
     }
 
@@ -97,7 +98,7 @@ impl Request {
                 Header::Generic { name: "CSeq".to_string(), value: c_seq.to_string() },
                 Header::Generic { name: "Session".to_string(), value: session.to_string() }
             ],
-            body: vec![]
+            body: vec![],
         }
     }
 
@@ -110,7 +111,7 @@ impl Request {
                 Header::Generic { name: "CSeq".to_string(), value: c_seq.to_string() },
                 Header::Generic { name: "Session".to_string(), value: session.to_string() }
             ],
-            body: vec![]
+            body: vec![],
         }
     }
 
@@ -123,7 +124,7 @@ impl Request {
                 Header::Generic { name: "CSeq".to_string(), value: c_seq.to_string() },
                 Header::Generic { name: "Session".to_string(), value: session.to_string() }
             ],
-            body: vec![]
+            body: vec![],
         }
     }
 
@@ -136,7 +137,7 @@ impl Request {
                 Header::Generic { name: "CSeq".to_string(), value: c_seq.to_string() },
                 Header::Generic { name: "Session".to_string(), value: session }
             ],
-            body: vec![]
+            body: vec![],
         }
     }
 }
@@ -147,7 +148,7 @@ pub struct Response {
     status_code: u32,
     status: String,
     headers: Vec<Header>,
-    body: Vec<u8>
+    body: Vec<u8>,
 }
 
 impl Response {
@@ -359,46 +360,11 @@ impl<T: AsyncRead + AsyncWrite + 'static> ClientProto<T> for RtspProto {
     }
 }
 
-pub struct RtspSession {
-    pub uri: String,
-    pub sock_addr: SocketAddr,
-    pub session: String,
-    pub session_timeout: u64,
-    pub rtp_ports: (u16, u16),
-    pub c_seq: AtomicUsize,
-    //pub send_keepalives: Box<Future<Item=(), Error=io::Error>> // this should be dispatced via core.run() to send periodic GET_PARAMETER requests to keep the session from timing out
-}
-
 fn fetch_add_1(c_seq: &AtomicUsize) -> usize {
     c_seq.fetch_add(1, Ordering::SeqCst)
 }
 
-impl RtspSession {
-    pub fn run_keepalives(&self) {
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
-        loop {
-            match core.run(
-                Client::connect(&self.sock_addr, &handle)
-                    .and_then(|client| {
-                        client
-                            .call(Request::get_parameter(self.uri.as_str(),
-                                                         fetch_add_1(&self.c_seq),
-                                                         self.session.clone()))
-                            .and_then(move |response| {
-                                info!("keepalive response: {:?}\n{}", response, str::from_utf8(response.body.as_ref()).unwrap());
-                                Ok(())
-                            })
-                    })) {
-                Ok(()) => (),
-                Err(e) => error!("rtsp keepalive request error: {:?}", e)
-            }
-            thread::sleep(Duration::from_secs(self.session_timeout * 3 / 4));
-        }
-    }
-}
-
-pub fn start_session(uri: &str, rtp_ports: (u16, u16)) -> Result<RtspSession, io::Error> {
+pub fn run_client(uri: &str, rtp_ports: (u16, u16)) -> Result<(), io::Error> {
     let parsed_uri: Uri = uri.parse().map_err(|_| io::Error::new(io::ErrorKind::Other, "uri parse error"))?;
     if parsed_uri.scheme().unwrap_or("") != "rtsp" || parsed_uri.host().is_none() {
         return Err(io::Error::new(io::ErrorKind::Other, "invalid rtsp uri"));
@@ -441,15 +407,22 @@ pub fn start_session(uri: &str, rtp_ports: (u16, u16)) -> Result<RtspSession, io
                                                 info!("response: {:?}\n{}", response, str::from_utf8(response.body.as_ref()).unwrap());
                                                 let session = response.session();
                                                 let session_timeout = response.session_timeout();
-                                                let uri = uri.to_string();
-                                                Ok(RtspSession {
-                                                    uri: uri.clone(),
-                                                    sock_addr: sock_addr.clone(),
-                                                    session: session.clone(),
-                                                    session_timeout,
-                                                    c_seq,
-                                                    rtp_ports,
-                                                })
+                                                // create a interval timer to send RTSP GET_PARAMETER keepalives
+                                                let timer = Timer::default();
+                                                let keepalives = timer
+                                                    .interval(Duration::from_secs(session_timeout * 3 / 4))
+                                                    .for_each(move |_| {
+                                                        client
+                                                            .call(Request::get_parameter(uri,
+                                                                                         fetch_add_1(&c_seq),
+                                                                                         session.clone()))
+                                                            .and_then(move |response| {
+                                                                info!("keepalive response: {:?}\n{}", response, str::from_utf8(response.body.as_ref()).unwrap());
+                                                                Ok(())
+                                                            })
+                                                            .map_err(|_| TimerError::NoCapacity)
+                                                    });
+                                                keepalives.map_err(|_| io::Error::new(io::ErrorKind::Other, "timer error"))
                                             })
                                     })
                             })

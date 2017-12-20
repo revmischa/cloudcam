@@ -14,6 +14,7 @@ extern crate tokio_io;
 extern crate tokio_core;
 extern crate tokio_proto;
 extern crate tokio_service;
+extern crate tokio_timer;
 #[macro_use]
 extern crate nom;
 extern crate bytes;
@@ -170,19 +171,13 @@ fn main() {
         Some(rtsp_uri) => {
             // setup rtsp session/rtp reflector
             let rtp_recv_ports = rtp::find_port_pair((40000..50000)).unwrap();
-            match rtsp::start_session(rtsp_uri.as_str(), rtp_recv_ports) {
-                Ok(rtsp_session) => {
-                    // run a keepalives thread so rtsp session doesn't timeout
-                    std::thread::spawn(move || {
-                        rtsp_session.run_keepalives();
-                    });
-                    // run rtp reflector to send rtp packet received locally to the janus gateway
-                    std::thread::spawn(move || {
-                        // todo: listen on 127.0.0.1 instead of 0.0.0.0 if RTSP session is local-only (e.g. running on camera)
-                        rtp::run_reflector(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), rtp_recv_ports, &rtp_dest);
-                    });
-                }
-                Err(e) => error!("rtsp session error: {:?}", e)
+            std::thread::spawn(move || {
+                rtp::run_reflector(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), rtp_recv_ports, &rtp_dest);
+            });
+            // this blocks forever running RTSP keepalives
+            match rtsp::run_client(rtsp_uri.as_str(), rtp_recv_ports) {
+                Ok(()) => (),
+                Err(e) => error!("rtsp::run_client error: {}", e)
             }
         }
         None => ()
