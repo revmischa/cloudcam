@@ -18,15 +18,16 @@ To connect to remote AXIS camera via VAPIX HTTP API, add this:
     "vapix_host": "<camera ip>",
     "vapix_username": "<camera user name>",
     "vapix_password": "<camera user password>"
-  }
+  },
+  "rtsp": {
+    "uri": "rtsp://<camera ip>/axis-media/media.amp"
+  }  
 ```
 to the `config.json`
 
 ### Axis cameras
 
-1. Cross-compile a static Rust binary: `docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:$TAG cargo build --release`
-Where $TAG is `arm-musleabi`, `armv7-musleabihf` or `mipsel-musl` depending on your camera's CPU
-2. Install appropriate AXIS ACAP SDK (v1.4 or v2.0, latter might require some `package.conf` editing) to $AXIS_SDK_ROOT and run `(cd $AXIS_SDK_ROOT && source init_env)`
-3. Create AXIS application packages via `(cd axis && create-package.sh)`
-4. Install and run the application via `eap-install.sh install` and `eap-install.sh start` or the camera's web UI 
+1. Install appropriate AXIS ACAP SDKs (v1.4 or v2.0 or both) to `axis/emb-app-sdk_<version>` (or somewhere else, adjusting paths in `client/rust/axis/build-packages.sh`)
+2. Build Rust binary and AXIS application packages for a selected platform (`mipsisa32r2el` or `armv6`) via `(cd client/rust/axis && build-packages.sh [ mipsisa32r2el | armv6 ])`
+3. Install and run the application via `eap-install.sh install` and `eap-install.sh start` (`eap-install.sh` is a part of ACAP SDK) or the camera's web UI 
  
