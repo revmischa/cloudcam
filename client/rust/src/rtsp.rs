@@ -151,9 +151,9 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn session(self) -> String {
-        for header in self.headers {
-            match &header {
+    fn session_raw(&self) -> String {
+        for header in &self.headers {
+            match header {
                 &Header::ContentLength { ref value } => (),
                 &Header::Generic { ref name, ref value } => {
                     if name == "Session" {
@@ -163,6 +163,18 @@ impl Response {
             }
         }
         return "".to_string();
+    }
+
+    pub fn session(&self) -> String {
+        let r = self.session_raw();
+        let v: Vec<&str> = r.split(|c| c == ';' || c == ' ').collect();
+        return v.get(0).unwrap_or(&"").to_string();
+    }
+
+    pub fn session_timeout(&self) -> u64 {
+        let r = self.session_raw();
+        let v: Vec<&str> = r.split(|c| c == ';' || c == ' ').collect();
+        return v.get(1).unwrap_or(&"").parse().unwrap_or(60);
     }
 }
 
@@ -225,45 +237,6 @@ named!(response<Response>,
             status: status.to_string(),
             headers,
             body: body.to_vec()})));
-
-//pub fn test_message(data: &[u8]) {
-//    match message(data) {
-//        IResult::Done(remaining_input, result) => println!("{:?}\n =>\n{:?}\nremaining: {:?}\n", str::from_utf8(data), result, str::from_utf8(remaining_input)),
-//        IResult::Error(e) => println!("error: {:?}", e),
-//        IResult::Incomplete(needed) => println!("incomplete: {:?}", needed)
-//    }
-//}
-//
-//pub fn test_parser() {
-//    test_message(b"RTSP/1.0 200 OK\r\nCSeq: 2\r\nContent-Base: rtsp://example.com/media.mp4\r\nContent-Type: application/sdp\r\n\r\nzzzzzz");
-//    test_message(b"RTSP/1.0 200 OK\r
-//CSeq: 2\r
-//Content-Base: rtsp://example.com/media.mp4\r
-//Content-Type: application/sdp\r\n\r\n");
-//    test_message(b"RTSP/1.0 200 OK\r
-//CSeq: 2\r
-//Content-Base: rtsp://example.com/media.mp4\r
-//Content-Type: application/sdp\r
-//Content-Length: 460\r
-//\r
-//m=video 0 RTP/AVP 96\r
-//a=control:streamid=0\r
-//a=range:npt=0-7.741000\r
-//a=length:npt=7.741000\r
-//a=rtpmap:96 MP4V-ES/5544\r
-//a=mimetype:string;\"video/MP4V-ES\"\r
-//a=AvgBitRate:integer;304018\r
-//a=StreamName:string;\"hinted video track\"\r
-//m=audio 0 RTP/AVP 97\r
-//a=control:streamid=1\r
-//a=range:npt=0-7.712000\r
-//a=length:npt=7.712000\r
-//a=rtpmap:97 mpeg4-generic/32000/2\r
-//a=mimetype:string;\"audio/mpeg4-generic\"\r
-//a=AvgBitRate:integer;65790\r
-//a=StreamName:string;\"hinted audio track\"\r
-//");
-//}
 
 pub struct Client {
     inner: Validate<ClientService<TcpStream, RtspProto>>,
@@ -439,7 +412,7 @@ pub fn start_session(uri: &str, rtp_ports: (u16, u16)) -> Result<RtspSession, io
     info!("connecting to {}:{} [{}]", host, port, sock_addr);
     let mut core = Core::new().unwrap();
     let handle = core.handle();
-    let c_seq = AtomicUsize::new(0);
+    let c_seq = AtomicUsize::new(1);
     core.run(
         Client::connect(&sock_addr, &handle)
             .and_then(|client| {
@@ -455,6 +428,7 @@ pub fn start_session(uri: &str, rtp_ports: (u16, u16)) -> Result<RtspSession, io
                                 // a=rtpmap:96 H264/90000
                                 // a=fmtp:96 packetization-mode=1; profile-level-id=4D4029; sprop-parameter-sets=Z01AKZpmAoAy2AtQEBAQXpw=,aO48gA==
                                 info!("response: {:?}\n{}", response, str::from_utf8(response.body.as_ref()).unwrap());
+                                // todo: extract all a:control endpoints and setup all of them
                                 client
                                     // note: some clients might want to receive RTP/AVP/UDP;unicast instead of RTP/AVP;unicast
                                     .call(Request::setup(uri, fetch_add_1(&c_seq),
@@ -466,12 +440,13 @@ pub fn start_session(uri: &str, rtp_ports: (u16, u16)) -> Result<RtspSession, io
                                             .and_then(move |response| {
                                                 info!("response: {:?}\n{}", response, str::from_utf8(response.body.as_ref()).unwrap());
                                                 let session = response.session();
+                                                let session_timeout = response.session_timeout();
                                                 let uri = uri.to_string();
                                                 Ok(RtspSession {
                                                     uri: uri.clone(),
                                                     sock_addr: sock_addr.clone(),
                                                     session: session.clone(),
-                                                    session_timeout: 60, // todo: get actual timeout from the response
+                                                    session_timeout,
                                                     c_seq,
                                                     rtp_ports,
                                                 })
