@@ -20,6 +20,7 @@ extern crate bytes;
 extern crate dns_lookup;
 
 use rumqtt::{MqttOptions, MqttClient, QoS, MqttCallback, Message};
+use std::env;
 use std::thread;
 use std::time::Duration;
 use std::path::Path;
@@ -100,7 +101,9 @@ fn main() {
     // global state which could be updated by commands/shadow delta handlers
     let rtp_dest = Arc::new(Mutex::<RtpDest>::new(RtpDest { addresses: None }));
     // read config.json
-    let config = Config::read(Path::new("./config.json")).expect("no or malformed config.json");
+    let exe_path = env::current_exe().unwrap();
+    let config_dir = exe_path.parent().unwrap();
+    let config = Config::read(&config_dir.join(Path::new("config.json"))).expect("no or malformed config.json");
     info!("iot endpoint: {endpoint}, thing name: {thing_name}, client id: {client_id}",
           endpoint = config.mqtt_endpoint, thing_name = config.thing_name, client_id = config.mqtt_client_id);
     // write tls certs/keys to temporary files for the mqtt client
@@ -115,6 +118,7 @@ fn main() {
         .set_client_id(config.mqtt_client_id.clone())
         .set_clean_session(true) // AWS IoT broker only supports clean sessions
         .set_keep_alive(5)
+        .set_should_verify_ca(!config.mqtt_endpoint.starts_with("127.0.0.1")) // don't verify certs when talking to localhost mqtt broker (e.g. testing)
         .set_reconnect(3) // seconds between reconnect attempts
         .set_ca(ca_path)
         .set_client_cert(cert_path, key_path)
