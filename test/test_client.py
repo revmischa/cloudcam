@@ -14,7 +14,8 @@ from PIL import Image
 import gi
 
 gi.require_version('Gst', '1.0')
-from gi.repository import GObject, Gst
+gi.require_version('GstRtspServer', '1.0')
+from gi.repository import GObject, Gst, GstRtspServer
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -29,7 +30,7 @@ def rand_string(size=12, chars=string.ascii_uppercase + string.ascii_uppercase +
 class ClientTestParams:
     """Contains any parameters for running the tests"""
     # timeout for waits on any individual tests
-    timeout = 10
+    timeout = 30
 
     # host/port settings for various services
     http_host = '127.0.0.1'
@@ -37,6 +38,9 @@ class ClientTestParams:
 
     mqtt_host = '127.0.0.1'
     mqtt_port = 8883
+
+    rtsp_host = '127.0.0.1'
+    rtsp_port = 8554
 
     rtp_host = '127.0.0.1'
     rtp_port = 47541
@@ -130,7 +134,8 @@ def mqtt_client(test_params, mqtt_broker, shadow_state):
     mqtt_client = mqtt.Client(client_id='test-driver')
     mqtt_client.on_connect = partial(on_connect, test_params, connection_event)
     mqtt_client.on_message = partial(on_message, test_params, shadow_state)
-    mqtt_client.tls_set(ca_certs=test_params.ca_path, certfile=test_params.client_cert_path, keyfile=test_params.client_key_path)
+    mqtt_client.tls_set(ca_certs=test_params.ca_path, certfile=test_params.client_cert_path,
+                        keyfile=test_params.client_key_path)
     mqtt_client.connect(test_params.mqtt_host, test_params.mqtt_port, 60)
     mqtt_client.loop_start()
     print("waiting for mqtt connection..")
@@ -141,7 +146,7 @@ def mqtt_client(test_params, mqtt_broker, shadow_state):
 
 
 @pytest.fixture(scope="session")
-def cloudcam_client(test_params, mqtt_broker):
+def cloudcam_client(test_params, mqtt_broker, gst_rtp_pipeline):
     print("launching cloudcam client..")
     with open(os.path.join(os.path.split(cloudcam_client_path)[0], 'config.json'), 'w') as f:
         json.dump({
@@ -151,7 +156,10 @@ def cloudcam_client(test_params, mqtt_broker):
             "endpoint": test_params.mqtt_host,
             "caPem": open(test_params.ca_path, 'r').read(),
             "certificatePem": open(test_params.client_cert_path, 'r').read(),
-            "certificatePrivateKey": open(test_params.client_key_path, 'r').read()
+            "certificatePrivateKey": open(test_params.client_key_path, 'r').read(),
+            "rtsp": {
+                "uri": "rtsp://" + test_params.rtsp_host + ":" + str(test_params.rtsp_port) + "/test"
+            }
         }, f)
     client_proc = subprocess.Popen(cloudcam_client_path)
     # wait until client connects to mqtt broker and subscribes to relevant topics
@@ -235,6 +243,17 @@ def gst_rtp_pipeline(test_params):
     print("starting gstreamer rtp pipeline..")
     GObject.threads_init()
     Gst.init(None)
+
+    rtsp_server = GstRtspServer.RTSPServer.new()
+    rtsp_media_factory = GstRtspServer.RTSPMediaFactory.new()
+
+    mounts = rtsp_server.get_mount_points()
+    rtsp_server.set_service(str(test_params.rtsp_port))
+    rtsp_media_factory.set_launch('videotestsrc ! \
+		     video/x-raw,format=RGB,width=640,height=480,framerate=30/1 ! \
+		     videoconvert ! x264enc ! rtph264pay name=pay0 pt=96')
+    mounts.add_factory('/test', rtsp_media_factory)
+    rtsp_server.attach(None)
 
     # setup a pipeline which will receive RTP video and decode it, calling new_gst_buffer() on every decoded frame
     udpsrc = Gst.ElementFactory.make("udpsrc", None)
@@ -321,15 +340,13 @@ def test_rtp_streaming(test_params, cloudcam_client, mqtt_client, shadow_state, 
     shadow_state.shadow_version += 1
     mqtt_client.publish(test_params.shadow_delta_topic, json.dumps({
         'state': {
-            'desired': {
-                'streams': {
-                    'primary': {
-                        'gateway_instance': test_params.rtp_host,
-                        'stream_rtp_port': test_params.rtp_port,
-                        'stream_h264_bitrate': 256
-                    },
-                    'current': 'primary'
-                }
+            'streams': {
+                'primary': {
+                    'gateway_instance': test_params.rtp_host,
+                    'stream_rtp_port': test_params.rtp_port,
+                    'stream_h264_bitrate': 256
+                },
+                'current': 'primary'
             }
         },
         'version': shadow_state.shadow_version

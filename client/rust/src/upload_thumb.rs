@@ -26,7 +26,7 @@ pub fn exec(config: &Config, payload: &serde_json::Value) -> Result<Option<Vec<u
     let buf = axis_native::get_jpeg_snapshot(config).unwrap_or(
         axis_vapix::get_jpeg_snapshot(config).unwrap_or_else(|_| {
             let mut buf: Vec<u8> = Vec::new();
-            File::open("sample.jpg").and_then(|mut f| f.read_to_end(&mut buf)).is_ok();
+            File::open("sample/snowdino.jpg").and_then(|mut f| f.read_to_end(&mut buf)).is_ok();
             buf
         }));
     req.headers_mut().set(ContentLength(buf.len() as u64));
