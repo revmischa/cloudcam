@@ -30,7 +30,7 @@ def rand_string(size=12, chars=string.ascii_uppercase + string.ascii_uppercase +
 class ClientTestParams:
     """Contains any parameters for running the tests"""
     # timeout for waits on any individual tests
-    timeout = 30
+    timeout = 20
 
     # host/port settings for various services
     http_host = '127.0.0.1'
@@ -244,14 +244,14 @@ def gst_rtp_pipeline(test_params):
     GObject.threads_init()
     Gst.init(None)
 
+    # setup a mock RTSP server
     rtsp_server = GstRtspServer.RTSPServer.new()
     rtsp_media_factory = GstRtspServer.RTSPMediaFactory.new()
-
     mounts = rtsp_server.get_mount_points()
     rtsp_server.set_service(str(test_params.rtsp_port))
     rtsp_media_factory.set_launch('videotestsrc ! \
 		     video/x-raw,format=RGB,width=640,height=480,framerate=30/1 ! \
-		     videoconvert ! x264enc ! rtph264pay name=pay0 pt=96')
+		     videoconvert ! x264enc ! video/x-h264,profile=baseline ! rtph264pay name=pay0 pt=96')
     mounts.add_factory('/test', rtsp_media_factory)
     rtsp_server.attach(None)
 
