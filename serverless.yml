@@ -1,0 +1,121 @@
+service: cloudcam
+
+plugins:
+  # - serverless-python-requirements
+  - serverless-pseudo-parameters
+  # - serverless-domain-manager
+
+custom:
+  cloudcam:
+    s3_thumb_bucket_name: '#{AWS::StackName}-thumbs'
+    janus:
+      hosted_zone_domain: cloudcamdev.int80.biz
+      hosted_zone_id: Z28O6A5M6DDPL6
+      instance_name_prefix: '#{AWS::StackName}-stream'
+    ui_bucket_name: '#{AWS::StackName}-ui'
+  pythonRequirements:
+    dockerizePip: false
+    slim: true
+    noDeploy:
+      - psycopg2
+      - boto3
+      - botocore
+      - docutils
+  # customDomain:
+    # domainName: inixy-api.jetbridge.com
+    # stage: ${self:provider.stage}
+    # createRoute53Record: true
+
+
+provider:
+  name: aws
+  runtime: python3.6
+  stage: ${opt:stage, 'dev'}
+  # profile: default
+  region: us-west-2
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action: secretsmanager:GetSecretValue
+      Resource: "arn:aws:secretsmanager:#{AWS::Region}:#{AWS::AccountId}:secret:myservice/*"
+
+package:
+  include:
+    - cloudcam/**
+  exclude:
+    - '**'
+    - node_modules/**
+    - venv/**
+    - '**/__pycache__/**'
+    - ".#*"
+
+functions:
+  IoTListThings:
+    memory: 128
+    timeout: 10
+    handler: cloudcam.iot_list_things.handler
+    events:
+      - http: GET /list_things
+    role: !GetAtt [IotListThingsLambdaRole, Arn]
+
+  IoTProvisionThing:
+    handler: cloudcam.iot_provision_thing.handler
+    timeout: 10
+    memory: 128
+    role: !GetAtt [IotProvisionThingLambdaRole, Arn]
+
+  IoTAttachThingPolicy:
+    memory: 128
+    role: !GetAtt [IotAttachThingPolicyLambdaRole, Arn]
+    handler: cloudcam.iot_attach_thing_policy.handler
+
+  ThumbStore:
+    role: !GetAtt [ThumbStoreRole, Arn]
+    handler: cloudcam.iot_request_thumb.handler
+    timeout: 10
+    environment:
+      S3_THUMB_BUCKET_NAME: ${self:custom.cloudcam.s3_thumb_bucket_name}
+    events:
+      - iot:
+        name: ThumbStoreEvent
+        sql: "SELECT * FROM 'cloudcam/thumb/request/*'"
+      - iot:
+        name: ThumbStoreConnectedEvent
+        sql: "SELECT * FROM '$aws/events/presence/connected/#'"
+
+  CognitoPresignup:
+    role: !GetAtt [CognitoPresignupLambdaRole, Arn]
+    handler: cloudcam.cognito_presignup.handler
+    memory: 128
+
+  JanusStartStream:
+    role: !GetAtt [JanusStartStreamLambdaRole, Arn]
+    name: ${self:provider.stage}-janus_start_stream
+    handler: cloudcam.janus_start_stream.handler
+    timeout: 10
+    memory: 128
+    environment:
+      JANUS_HOSTED_ZONE_DOMAIN: ${self:custom.cloudcam.janus.hosted_zone_domain}
+      JANUS_INSTANCE_NAME_PREFIX: ${self:custom.cloudcam.janus.instance_name_prefix}
+  JanusStopStream:
+    role: !GetAtt [JanusStopStreamLambdaRole, Arn]
+    name: ${self:provider.stage}-janus_stop_stream
+    handler: cloudcam.janus_stop_stream.handler
+    timeout: 10
+    memory: 128
+
+  JanusScaleLightsail:
+    role: !GetAtt [JanusScaleLightsailLambdaRole, Arn]
+    name: ${self:provider.stage}-janus_scale_lightsail
+    handler: cloudcam.janus_scale_lightsail.handler
+    timeout: 300
+    environment:
+      LIGHTSAIL_AZS: !Ref LightsailAzs
+      LIGHTSAIL_BLUEPRINT_ID: !Ref LightsailBlueprintId
+      LIGHTSAIL_BUNDLE_ID: !Ref LightsailBundleId
+      LIGHTSAIL_JANUS_IMAGE: !Ref LightsailJanusImage
+      JANUS_HOSTED_ZONE_ID: ${self:custom.cloudcam.janus.hosted_zone_id}
+      JANUS_HOSTED_ZONE_DOMAIN: ${self:custom.cloudcam.janus.hosted_zone_domain}
+      JANUS_INSTANCE_NAME_PREFIX: ${self:custom.cloudcam.janus.instance_name_prefix}
+
+resources: ${file(cloudformation/cloudcam.yml)}

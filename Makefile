@@ -1,6 +1,7 @@
 ###### --- This application
 SRCS = src/cloudcam.c src/log.c src/ccgst.c src/iot.c src/s3.c
 OBJS = $(SRCS:.c=.o)
+BIN_DIR = bin
 PROGS = cloudcam
 
 INCLUDE_DIRS += -I include -I config
@@ -67,9 +68,12 @@ BUILD = $(CC) $(CFLAGS)
 ###### --- targets
 .PHONY:	all clean dist debug host
 
-cloudcam: dep
-	$(BUILD) -o cloudcam $(SRCS) $(LDFLAGS)
+cloudcam: dep $(BIN_DIR)
+	$(BUILD) -o $(BIN_DIR)/cloudcam $(SRCS) $(LDFLAGS)
 all: $(PROGS)
+
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
 
 %.o: %.c
 	@echo Compiling $<
