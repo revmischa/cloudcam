@@ -61,10 +61,9 @@ certs/verificationCert.*
 *.dSYM/
 
 # serverless
-.serverless
+/.serverless
 node_modules
 
-bin
-.#*
+/bin/cloudcam
 vendor/.extracted*
 vendor/jansson*

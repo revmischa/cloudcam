@@ -1,7 +1,7 @@
 service: cloudcam
 
 plugins:
-  # - serverless-python-requirements
+  - serverless-python-requirements
   - serverless-pseudo-parameters
   # - serverless-domain-manager
 
@@ -16,11 +16,14 @@ custom:
   pythonRequirements:
     dockerizePip: false
     slim: true
+    useDownloadCache: true
+    useStaticCache: true
     noDeploy:
       - psycopg2
       - boto3
       - botocore
       - docutils
+
   # customDomain:
     # domainName: inixy-api.jetbridge.com
     # stage: ${self:provider.stage}
@@ -53,13 +56,13 @@ functions:
   IoTListThings:
     memory: 128
     timeout: 10
-    handler: cloudcam.iot_list_things.handler
+    handler: cloudcam/iot_list_things.handler
     events:
       - http: GET /list_things
     role: !GetAtt [IotListThingsLambdaRole, Arn]
 
   IoTProvisionThing:
-    handler: cloudcam.iot_provision_thing.handler
+    handler: cloudcam/iot_provision_thing.handler
     timeout: 10
     memory: 128
     role: !GetAtt [IotProvisionThingLambdaRole, Arn]
@@ -67,11 +70,11 @@ functions:
   IoTAttachThingPolicy:
     memory: 128
     role: !GetAtt [IotAttachThingPolicyLambdaRole, Arn]
-    handler: cloudcam.iot_attach_thing_policy.handler
+    handler: cloudcam/iot_attach_thing_policy.handler
 
   ThumbStore:
     role: !GetAtt [ThumbStoreRole, Arn]
-    handler: cloudcam.iot_request_thumb.handler
+    handler: cloudcam/iot_request_thumb.handler
     timeout: 10
     environment:
       S3_THUMB_BUCKET_NAME: ${self:custom.cloudcam.s3_thumb_bucket_name}
@@ -85,13 +88,13 @@ functions:
 
   CognitoPresignup:
     role: !GetAtt [CognitoPresignupLambdaRole, Arn]
-    handler: cloudcam.cognito_presignup.handler
+    handler: cloudcam/cognito_presignup.handler
     memory: 128
 
   JanusStartStream:
     role: !GetAtt [JanusStartStreamLambdaRole, Arn]
     name: ${self:provider.stage}-janus_start_stream
-    handler: cloudcam.janus_start_stream.handler
+    handler: cloudcam/janus_start_stream.handler
     timeout: 10
     memory: 128
     environment:
@@ -100,14 +103,14 @@ functions:
   JanusStopStream:
     role: !GetAtt [JanusStopStreamLambdaRole, Arn]
     name: ${self:provider.stage}-janus_stop_stream
-    handler: cloudcam.janus_stop_stream.handler
+    handler: cloudcam/janus_stop_stream.handler
     timeout: 10
     memory: 128
 
   JanusScaleLightsail:
     role: !GetAtt [JanusScaleLightsailLambdaRole, Arn]
     name: ${self:provider.stage}-janus_scale_lightsail
-    handler: cloudcam.janus_scale_lightsail.handler
+    handler: cloudcam/janus_scale_lightsail.handler
     timeout: 300
     environment:
       LIGHTSAIL_AZS: !Ref LightsailAzs
