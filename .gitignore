@@ -1,5 +1,4 @@
 # binary
-/cloudcam
 /vendor/.built_*
 /vendor/.extracted_libcurl
 /vendor/curl-*
