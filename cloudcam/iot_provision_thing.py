@@ -76,13 +76,13 @@ class ThingProvisioner:
 
     def __init__(self, thing_name: str, cognito_identity_id: str = None, client_id: str = None, thing_type: str = None):
         self.cognito_identity_id = cognito_identity_id
-        self.client_id = client_id
         self.thing_name = thing_name
         self.thing_type = thing_type
 
         if not client_id:
             # by default clientId and thingName are the same
             client_id = thing_name
+        self.client_id = client_id
 
         # get env info
         self.iot_endpoint = iot.describe_endpoint()
@@ -190,7 +190,7 @@ class ThingProvisioner:
         # attach policy to certificate
         iot.attach_principal_policy(policyName=certificate_policy_name, principal=certificate_arn)
         # connect cert to thing
-        iot.attach_policy(policyName=certificate_policy_name, target=self.thing_arn)
+        iot.attach_thing_principal(principal=certificate_arn, thingName=self.thing_name)
 
     def attach_principal_policy(self):
         region = self.region
