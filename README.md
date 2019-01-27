@@ -23,8 +23,8 @@ There is full support for embedded linux. Video streaming will be done with gstr
 ### Deploy:
 1. Install AWS CLI and authenticate
 1. Install [serverless](https://serverless.com/)
-1. `yarn`
-1. Run `sls deploy`
+1. Run `yarn` to install serverless plugins
+1. Run `sls deploy` to deploy lambdas and CloudFormation stack
 
 ### Frontend:
 ```
@@ -38,9 +38,10 @@ yarn start
 
 ### Architecture
 There are several distinct modules that must interact to permit live streaming video to flow from an input device to a client using a mobile app or web browser.
+
 A video source generates video and possibly audio from either an IP camera attached to a network, a local camera (built-in camera or USB webcam), or a file. While we'd all love to use a patent-unencumbered video codec that works on all platforms [this is not possible](https://spiegelmock.com/2015/07/24/flash/) so we must use h264.
-Once the streaming source has video codec data it must create a streaming session and mountpoint on a video server and then begin transmitting the video and/or audio codec data via [RTP](https://en.wikipedia.org/wiki/Real-time_Transport_Protocol) over UDP. This video server can use WebSockets or HTTP for stream session creation on the back-end, and can deliver it via [WebRTC](https://webrtc.org/) to client devices. This server with two faces as it were is known as [Janus](https://janus.conf.meetecho.com/).
-As long as the streaming source is generating h264 video (all current-generation IP cameras do) it can be passed through untouched all the way to the client without any transcoding. This means there is a very low CPU requirement for the intermediate software. WebRTC is a new standard for live media streaming in web browsers and mobile applications and it is already supported in most browsers with the notable exception of Safari, though Apple has [announced](http://www.nojitter.com/post/240171589/apple-jumps-on-the-webrtc-bandwagon) WebRTC support will be forthcoming soon.
+
+Once the streaming source has video codec data it must create a streaming session and mountpoint on a video server and then begin transmitting the video and/or audio codec data via [RTP](https://en.wikipedia.org/wiki/Real-time_Transport_Protocol) over UDP. This video server can use WebSockets or HTTP for stream session creation on the back-end, and can deliver it via [WebRTC](https://webrtc.org/) to client devices. This server with two faces as it were is known as [Janus](https://janus.conf.meetecho.com/). As long as the streaming source is generating h264 video (all current-generation IP cameras do) it can be passed through untouched all the way to the client without any transcoding. This means there is a very low CPU requirement for the intermediate software. WebRTC is a new standard for live media streaming in web browsers and mobile applications and it is already supported in most browsers with the notable exception of Safari, though Apple has [announced](http://www.nojitter.com/post/240171589/apple-jumps-on-the-webrtc-bandwagon) WebRTC support will be forthcoming soon.
 
 By using gstreamer, Janus, and WebRTC we can construct a fully open-source, standards-compliant free live video streaming service. Incorporating our Axis camera app using their (propriatary, unfortunately) ACAP SDK with the AWS IoT API and Lambda allows us to run the application services and signalling entirely in the cloud without servers or even virtual machine instances. The Janus streaming media server can be set up separately including on premises for organizations that do not want their sensitive video leaving their network.
 
