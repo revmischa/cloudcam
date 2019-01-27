@@ -98,7 +98,6 @@ functions:
 
   JanusStartStream:
     role: !GetAtt [JanusStartStreamLambdaRole, Arn]
-    name: ${self:provider.stage}-janus_start_stream
     handler: cloudcam/janus_start_stream.handler
     timeout: 10
     memory: 128
@@ -107,7 +106,6 @@ functions:
       JANUS_INSTANCE_NAME_PREFIX: ${self:custom.cloudcam.janus.instance_name_prefix}
   JanusStopStream:
     role: !GetAtt [JanusStopStreamLambdaRole, Arn]
-    name: ${self:provider.stage}-janus_stop_stream
     handler: cloudcam/janus_stop_stream.handler
     timeout: 10
     memory: 128
