@@ -2,16 +2,11 @@ Modern software for manipulating live video streams from IP cameras.
 
 Based on Serverless, AWS Lambda and AWS IoT.
 
-[Explanation of this project.](http://spiegelmock.com/2016/03/27/diving-into-iot-development-using-aws/)
 
-[Digital video introduction](https://github.com/leandromoreira/digital_video_introduction) (technical background info).
-
-## Related projects
-* [Janus-panoptic](https://github.com/revmischa/janus-panoptic)
-* [Janus-docker](https://github.com/revmischa/docker-janus)
-
-### How this works
-[AWS IoT basics.](http://spiegelmock.com/2016/03/27/developing-a-cloud-based-iot-service/)
+## Project Info
+* [Explanation of this project](http://spiegelmock.com/2016/03/27/diving-into-iot-development-using-aws/)
+* [Digital video introduction](https://github.com/leandromoreira/digital_video_introduction) (technical background info).
+* [How it uses AWS IoT](http://spiegelmock.com/2016/03/27/developing-a-cloud-based-iot-service/)
 
 Currently working on embedded linux support, including for running on Axis cameras with the [ACAP SDK](http://www.axis.com/us/en/support/developer-support/axis-camera-application-platform). Support for other devices is planned.
 The backend services will be provided by AWS IoT, Lambda and S3.
@@ -20,7 +15,7 @@ There is full support for embedded linux. Video streaming will be done with gstr
 
 ### Building Client:
 * Install Dependencies:
-  * Debian/Ubuntu: `sudo apt install libgstreamer1.0-dev python3-pip`
+  * Debian/Ubuntu: `sudo apt install libgstreamer1.0-dev python3-pip yarn`
 * Type `make`
 
 ### Deploy:
@@ -36,10 +31,10 @@ yarn
 yarn start
 ```
 
-(optional) Run `cd cloudformation && ./encrypt-ssl-key.sh` to encrypt the SSL private key (`certs/$domain/server.key`) for the Janus gateway subdomain with the key managed by the AWS KMS and replace the `janus_encrypted_ssl_key_pem` value in `janus_scale_lightsail.py` with the result (note: this must be run as either as AWS root user or user specified in JANUS_KMS_KEY_USER_ARN in step 2)
+> (optional) Run `cd cloudformation && ./encrypt-ssl-key.sh` to encrypt the SSL private key (`certs/$domain/server.key`) for the Janus gateway subdomain with the key managed by the AWS KMS and replace the `janus_encrypted_ssl_key_pem` value in `janus_scale_lightsail.py` with the result (note: this must be run as either as AWS root user or user specified in JANUS_KMS_KEY_USER_ARN in step 2)
 
 
-### Architecture
+## Architecture
 There are several distinct modules that must interact to permit live streaming video to flow from an input device to a client using a mobile app or web browser.
 
 A video source generates video and possibly audio from either an IP camera attached to a network, a local camera (built-in camera or USB webcam), or a file. While we'd all love to use a patent-unencumbered video codec that works on all platforms [this is not possible](https://spiegelmock.com/2015/07/24/flash/) so we must use h264.
@@ -49,10 +44,14 @@ Once the streaming source has video codec data it must create a streaming sessio
 By using gstreamer, Janus, and WebRTC we can construct a fully open-source, standards-compliant free live video streaming service. Incorporating our Axis camera app using their (propriatary, unfortunately) ACAP SDK with the AWS IoT API and Lambda allows us to run the application services and signalling entirely in the cloud without servers or even virtual machine instances. The Janus streaming media server can be set up separately including on premises for organizations that do not want their sensitive video leaving their network.
 
 
-### Contributing
+## Contributing
 If this sounds like an interesting project that you would like to help build, please drop us a line: [cloudcam@int80.biz](mailto:cloudcam@int80.biz).
 
-## Old projects
+### Related projects
+* [Janus-panoptic](https://github.com/revmischa/janus-panoptic)
+* [Janus-docker](https://github.com/revmischa/docker-janus)
+
+### Old projects
 This design has gone through many incarnations and revisions. Some previous attempts were:
 * [RTSP client](https://github.com/revmischa/rtsp-client)
 * [RTSP server](https://github.com/revmischa/rtsp-server)
