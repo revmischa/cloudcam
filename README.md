@@ -16,9 +16,9 @@ This is based on open source as much as humanly possible. Contributions are enco
 There is full support for embedded linux. Video streaming will be done with gstreamer.
 
 ### Building Client:
-1. Install Dependencies:
+* Install Dependencies:
   * Debian/Ubuntu: `sudo apt install libgstreamer1.0-dev python3-pip`
-2. Type `make`
+* Type `make`
 
 ### Deploy:
 1. Install AWS CLI and authenticate
