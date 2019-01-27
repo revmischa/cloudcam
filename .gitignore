@@ -8,6 +8,7 @@
 /vendor/aws_iot_client
 /vendor/libaws-iot.a
 
+__pycache__
 
 # axis files
 .eap-install.cfg
