@@ -20,13 +20,13 @@ There is full support for embedded linux. Video streaming will be done with gstr
   * Debian/Ubuntu: `sudo apt install libgstreamer1.0-dev python3-pip`
 2. Type `make`
 
-### Deploy
+### Deploy:
 1. Install AWS CLI and authenticate
 1. Install [serverless](https://serverless.com/)
 1. `yarn`
 1. Run `sls deploy`
 
-### Frontend
+### Frontend:
 ```
 cd ui
 yarn
