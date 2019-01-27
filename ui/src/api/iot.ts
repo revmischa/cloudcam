@@ -4,6 +4,10 @@ import AWS from 'aws-sdk'
 import { Auth } from 'aws-amplify'
 import SigV4Utils from './sigv4'
 import * as CCStack from '../aws-stack.json'
+import { default as J } from '../vendor/janus.es'
+
+// FIXME: janus needs TS decl
+const Janus = J as any
 
 export class IoTClient {
   private mqttClient: MQTT.Client | undefined
@@ -236,7 +240,6 @@ export class IoTClient {
   startStreaming(thingName) {
     return new Promise((resolve, reject) => {
       console.log('startStreaming: ' + thingName);
-      let Janus = (window as any).Janus;
       if (!Janus.isWebrtcSupported()) {
         reject("No WebRTC support... ");
       }
@@ -289,8 +292,8 @@ export class IoTClient {
                   reject(error);
                 },
                 onmessage: function (msg, jsep) {
-                  Janus.debug(" ::: Got a message :::");
-                  Janus.debug(JSON.stringify(msg));
+                  console.debug(" ::: Got a message :::");
+                  console.debug(JSON.stringify(msg));
                   var result = msg["result"];
                   if (result !== null && result !== undefined) {
                     if (result["status"] !== undefined && result["status"] !== null) {
@@ -299,21 +302,21 @@ export class IoTClient {
                         stopStream();
                     }
                   } else if (msg["error"] !== undefined && msg["error"] !== null) {
-                    Janus.debug(msg["error"]);
+                    console.debug(msg["error"]);
                     reject(msg["error"]);
                     return;
                   }
                   if (jsep !== undefined && jsep !== null) {
-                    Janus.debug("Handling SDP as well...");
-                    Janus.debug(jsep);
+                    console.debug("Handling SDP as well...");
+                    console.debug(jsep);
                     // Answer
                     streaming.createAnswer(
                       {
                         jsep: jsep,
                         media: { audioSend: false, videoSend: false },	// We want recvonly audio/video
                         success: function (jsep) {
-                          Janus.debug("Got SDP!");
-                          Janus.debug(jsep);
+                          console.debug("Got SDP!");
+                          console.debug(jsep);
                           var body = { "request": "start" };
                           streaming.send({ "message": body, "jsep": jsep });
                         },
@@ -325,8 +328,8 @@ export class IoTClient {
                   }
                 },
                 onremotestream: function (stream) {
-                  Janus.debug(" ::: Got a remote stream :::");
-                  Janus.debug(JSON.stringify(stream));
+                  console.debug(" ::: Got a remote stream :::");
+                  console.debug(JSON.stringify(stream));
                   store.dispatch({
                     type: 'iot/startStreaming', thingName: thingName, stopStreamFn: stopStream
                   });

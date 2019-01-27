@@ -17,7 +17,7 @@ class Home extends React.Component {
     return (
       <div>
         <section className='section content container'>
-          <h2 className='title'>Cameras <a onClick={() => client.refreshThings()}>refresh</a>
+          <h2 className='title'>Cameras <a onClick={() => client.refreshThings()} href="#">refresh</a>
           </h2>
           <div>
             {Object.entries(things).length === 0 && <div>No things</div>}
@@ -31,7 +31,7 @@ class Home extends React.Component {
                       <video id={thing.name} style={{display: thing.isStreaming ? 'block' : 'none'}} autoPlay/>
                     </p>
                     {thing.name}&nbsp;
-                    <a style={{display: thing.isStreaming ? 'none' : 'inline-block'}}
+                    <a style={{display: thing.isStreaming ? 'none' : 'inline-block'}} href="#"
                        onClick={() => client.requestThumbs([thing.name])}>refresh</a>&nbsp;
                     <a onClick={() => {
                       if (!thing.isStreaming) {
@@ -39,7 +39,7 @@ class Home extends React.Component {
                       } else {
                         client.stopStreaming(thing.name);
                       }
-                    }}><i className={thing.isStreaming ? 'fa fa-stop' : 'fa fa-play'}/></a>&nbsp;
+                    }} href="#">{thing.isStreaming ? 'stop' : 'view live'}</a>&nbsp;
                   </div>
                 </li>
               })}

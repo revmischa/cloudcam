@@ -6,23 +6,7 @@ import { BrowserRouter as Router, Route, Link } from "react-router-dom";
 import Provision from './pages/Provision'
 import Home from './pages/Home'
 import {Provider} from 'react-redux'
-import * as dotenv from 'dotenv'
-import AWS from 'aws-sdk'
-import * as CCStack from './aws-stack.json'
-
-dotenv.config()
-
 import store from './store'
-
-AWS.config.region = CCStack.Region
-Amplify.configure({
-  Auth: {
-    region: CCStack.Region,
-    userPoolId: CCStack.UserPoolId,
-    userPoolWebClientId: CCStack.UserPoolClientName,
-    identityPoolId: CCStack.IdentityPoolId,
-  }
-})
 
 const signUpConfig = {
   signUpFields: [
