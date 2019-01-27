@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@material-ui/core": "^3.9.1",
+    "@material-ui/icons": "^3.0.2",
+    "@material-ui/styles": "^3.0.0-alpha.9",
     "aws-amplify": "^1.1.19",
     "aws-amplify-react": "^2.3.0",
     "aws-sdk": "^2.395.0",
@@ -33,16 +36,16 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "typescript": "3.2.4",
-    "@types/moment": "^2.13.0",
-    "@types/paho-mqtt": "^1.0.4",
     "@types/aws-sdk": "^2.7.0",
     "@types/crypto-js": "^3.1.43",
     "@types/jest": "23.3.13",
+    "@types/moment": "^2.13.0",
     "@types/node": "10.12.18",
+    "@types/paho-mqtt": "^1.0.4",
     "@types/react": "16.7.21",
     "@types/react-dom": "16.0.11",
     "@types/react-router-dom": "^4.3.1",
-    "redux-devtools-extension": "^2.13.7"
+    "redux-devtools-extension": "^2.13.7",
+    "typescript": "3.2.4"
   }
 }
