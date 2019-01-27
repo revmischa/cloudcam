@@ -106,7 +106,11 @@ class ThingProvisioner:
         )
         if self.thing_type:
             create_thing['thingTypeName'] = self.thing_type
-        iot.create_thing(**create_thing)
+
+        # do create
+        create_res = iot.create_thing(**create_thing)
+        thing_arn = create_res['thingArn']
+        self.thing_arn = thing_arn
 
         # provision iot keys/certs
         keys_and_cert = iot.create_keys_and_certificate(setAsActive=True)
@@ -180,9 +184,13 @@ class ThingProvisioner:
             }]
         }
 
+        # create policy
         tools.ignore_resource_already_exists(iot.create_policy, policyName=certificate_policy_name,
                                              policyDocument=json.dumps(certificate_policy))
+        # attach policy to certificate
         iot.attach_principal_policy(policyName=certificate_policy_name, principal=certificate_arn)
+        # connect cert to thing
+        iot.attach_policy(policyName=certificate_policy_name, target=self.thing_arn)
 
     def attach_principal_policy(self):
         region = self.region
