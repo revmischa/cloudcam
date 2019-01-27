@@ -1,14 +1,26 @@
-import React from 'react'
+import * as React from 'react'
 import {connect} from 'react-redux'
 import {IoTClient} from '../api/iot'
 
-class Home extends React.Component {
+interface ICamera {
+  name: string
+  thumbUrl?: string
+  isStreaming: boolean
+}
+
+interface ICameraListProps {
+  things: ICamera[]
+}
+
+class CameraList extends React.Component<ICameraListProps, any> {
+  client = new IoTClient()
+
   constructor(props) {
     super(props);
-    this.client = new IoTClient()
-    this.state = {
-      things: [],
-    };
+  }
+
+  public componentDidMount() {
+    this.client.refreshThings()
   }
 
   render() {
@@ -23,7 +35,7 @@ class Home extends React.Component {
             {Object.entries(things).length === 0 && <div>No things</div>}
             <ul>
               {Object.entries(things).map(function ([key, thing]) {
-                return <li>
+                return <li key={thing.name}>
                   <div>
                     <p>
                       <img id={thing.name} className='thumb' style={{display: thing.isStreaming ? 'none' : 'block'}}
@@ -57,4 +69,4 @@ const mapStateToProps = function (store) {
   }
 };
 
-export default connect(mapStateToProps)(Home)
+export default connect(mapStateToProps)(CameraList)

@@ -11,17 +11,16 @@ const Janus = J as any
 
 export class IoTClient {
   private mqttClient: MQTT.Client | undefined
-  private lambdaClient: AWS.Lambda
 
-  constructor() {
-    Auth.currentCredentials().then(credentials => {
-      this.lambdaClient = new AWS.Lambda({ credentials: Auth.essentialCredentials(credentials) });
-    })
+  private async getLambdaClient(): Promise<AWS.Lambda> {
+    const credentials = await Auth.currentCredentials()
+    return new AWS.Lambda({ credentials: Auth.essentialCredentials(credentials) });
   }
 
-  invokeLambda(params: AWS.Lambda.InvocationRequest, callback?: (err: AWS.AWSError, data: AWS.Lambda.InvocationResponse) => void): AWS.Request<AWS.Lambda.InvocationResponse, AWS.AWSError> {
+  private async invokeLambda(params: AWS.Lambda.InvocationRequest, callback?: (err: AWS.AWSError, data: AWS.Lambda.InvocationResponse) => void): Promise<AWS.Request<AWS.Lambda.InvocationResponse, AWS.AWSError>> {
     // params.FunctionName = `${CCStack.StackName}-${params.FunctionName}`
-    return this.lambdaClient.invoke(params, callback)
+    const client = await this.getLambdaClient()
+    return client.invoke(params, callback)
   }
 
   isMqttConnected(): boolean {

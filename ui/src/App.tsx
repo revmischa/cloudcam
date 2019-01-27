@@ -3,7 +3,7 @@ import './App.css';
 import { withAuthenticator } from 'aws-amplify-react'; // or 'aws-amplify-react-native';
 import { BrowserRouter as Router, Route, Link } from "react-router-dom";
 import Provision from './pages/Provision'
-import Home from './pages/Home'
+import CameraList from './pages/cameraList'
 import {Provider} from 'react-redux'
 import store from './store'
 import DefaultLayout from './layout'
@@ -35,7 +35,7 @@ class App extends Component {
         <Router>
           <DefaultLayout>
             
-            <Route exact path="/" component={Home} />
+            <Route exact path="/" component={CameraList} />
             <Route exact path="/provision" component={Provision} />
           </DefaultLayout>
         </Router>
