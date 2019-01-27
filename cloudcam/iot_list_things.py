@@ -1,6 +1,7 @@
 import json
 import logging
 import boto3
+from slugify import slugify
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
@@ -36,7 +37,7 @@ def handler(event, context):
     thing_names = []
     for policy in policies:
         policy_name = policy['policyName']
-        thing_name = policy_name.replace(f'{identity_id}-'.replace(':', '_'), '')
+        thing_name = policy_name.replace(slugify(identity_id) + '-', '')
         if thing_exists_p(thing_name):
             thing_names.append(thing_name)
 
