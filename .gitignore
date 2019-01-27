@@ -64,6 +64,6 @@ certs/verificationCert.*
 /.serverless
 node_modules
 
-/bin/cloudcam
+/bin/*
 vendor/.extracted*
 vendor/jansson*

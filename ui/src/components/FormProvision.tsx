@@ -3,7 +3,7 @@ import { Field, reduxForm } from 'redux-form'
 import BasicField from './BasicField'
 
 const validate = values => {
-  const errors = {}
+  const errors = {} as any
   if (!values.thingName) {
     errors.thingName = 'Required'
   }

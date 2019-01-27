@@ -1,30 +1,31 @@
 import React from 'react'
 import {connect} from 'react-redux'
-import { provisionThing } from '../api/iot'
-import { error, success } from '../api/notification'
+// import { error, success } from '../api/notification'
 import FormProvision from '../components/FormProvision'
 import store from '../store'
+import {IoTClient} from '../api/iot'
 
 class Provision extends React.Component {
   constructor(props) {
     super(props);
+    this.client = new IoTClient()
     this.state = {
       thingConfig: null
     }
   }
 
-  onSubmit (form) {
-    return provisionThing(form.thingName)
+  onSubmit = (form) => {
+    return this.client.provisionThing(form.thingName)
       .then(data => {
         console.log('Device config:');
         console.log(data.thingConfig);
         store.dispatch({
           type: 'iot/provision', thingConfig: data.thingConfig
         });
-        success('Provisioned a thing.');
+        // success('Provisioned a thing.');
       })
       .catch(e => {
-        error(e && e.message ? e.message : 'Could not provision a thing.')
+        // error(e && e.message ? e.message : 'Could not provision a thing.')
       })
   }
 

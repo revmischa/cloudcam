@@ -1,22 +1,23 @@
 import React from 'react'
 import {connect} from 'react-redux'
-import {refreshThings, requestThumbs, startStreaming, stopStreaming} from '../api/iot'
+import {IoTClient} from '../api/iot'
 
 class Home extends React.Component {
   constructor(props) {
     super(props);
+    this.client = new IoTClient()
     this.state = {
       things: [],
-      user: false
     };
   }
 
   render() {
+    const client = this.client
     const {things} = this.props;
     return (
       <div>
         <section className='section content container'>
-          <h2 className='title'>Things <a onClick={refreshThings}><i className='fa fa-refresh'/></a>
+          <h2 className='title'>Cameras <a onClick={() => client.refreshThings()}>refresh</a>
           </h2>
           <div>
             {Object.entries(things).length === 0 && <div>No things</div>}
@@ -31,12 +32,12 @@ class Home extends React.Component {
                     </p>
                     {thing.name}&nbsp;
                     <a style={{display: thing.isStreaming ? 'none' : 'inline-block'}}
-                       onClick={() => requestThumbs([thing.name])}><i className='fa fa-refresh'/></a>&nbsp;
+                       onClick={() => client.requestThumbs([thing.name])}>refresh</a>&nbsp;
                     <a onClick={() => {
                       if (!thing.isStreaming) {
-                        startStreaming(thing.name);
+                        client.startStreaming(thing.name);
                       } else {
-                        stopStreaming(thing.name);
+                        client.stopStreaming(thing.name);
                       }
                     }}><i className={thing.isStreaming ? 'fa fa-stop' : 'fa fa-play'}/></a>&nbsp;
                   </div>
@@ -53,7 +54,6 @@ class Home extends React.Component {
 const mapStateToProps = function (store) {
   return {
     things: store.iot.things,
-    user: store.user.user
   }
 };
 

@@ -3,6 +3,8 @@ service: cloudcam
 plugins:
   - serverless-python-requirements
   - serverless-pseudo-parameters
+  - serverless-stack-output
+  - serverless-iam-roles-per-function
   # - serverless-domain-manager
 
 custom:
@@ -13,6 +15,8 @@ custom:
       hosted_zone_id: Z28O6A5M6DDPL6
       instance_name_prefix: '#{AWS::StackName}-stream'
     ui_bucket_name: '#{AWS::StackName}-ui'
+  output:
+    file: ui/src/aws-stack.json
   pythonRequirements:
     dockerizePip: false
     slim: true
@@ -45,6 +49,7 @@ provider:
 package:
   include:
     - cloudcam/**
+    - '!**/__pycache__/**'
   exclude:
     - '**'
     - node_modules/**

@@ -71,13 +71,13 @@ Resources:
                 Action:
                   - lambda:InvokeFunction
                 Resource:
-                  - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:#{AWS::StackName}*"
-  #                 - !GetAtt [IotAttachThingPolicyLambda, Arn]
-  #                 - !GetAtt [IotProvisionThingLambda, Arn]
-  #                 - !GetAtt [IotListThingsLambda, Arn]
-  #                 - !GetAtt [JanusStartStreamLambda, Arn]
-  #                 - !GetAtt [JanusStopStreamLambda, Arn]
-  #                 - !GetAtt [ThumbStoreLambda, Arn]
+                  - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:#{AWS::StackName}*"
+                  # - !GetAtt IoTListThingsLambdaFunction.Arn
+                  # - !GetAtt IoTProvisionThingLambdaFunction.Arn
+                  # - !GetAtt IoTAttachThingPolicyLambdaFunction.Arn
+                  # - !GetAtt JanusStartStreamLambdaFunction.Arn
+                  # - !GetAtt JanusStopStreamLambdaFunction.Arn
+                  # - !GetAtt ThumbStoreLambdaFunction.Arn
   CognitoIdentityPool:
     Type: AWS::Cognito::IdentityPool
     Properties:
@@ -306,6 +306,7 @@ Resources:
                   - iot:DetachPrincipalPolicy
                   - iot:CreateThing
                   - iot:CreateKeysAndCertificate
+                  - iot:AttachThingPrincipal
                   - sts:AssumeRole
                 Resource: '*'
               - Effect: Allow
@@ -535,6 +536,9 @@ Outputs:
   IdentityPoolId:
     Description: 'Id of the Cognito identity pool'
     Value: !Ref CognitoIdentityPool
+  UserPoolId:
+    Description: 'Cognito user pool id'
+    Value: !Ref CognitoUserPool
   UserPoolName:
     Description: 'Name of the Cognito user pool'
     Value: !GetAtt [CognitoUserPool, ProviderName]
@@ -544,3 +548,7 @@ Outputs:
   UiUrl:
     Description: 'URL of the UI'
     Value: !GetAtt [UiBucket, WebsiteURL]
+  Region:
+    Value: '#{AWS::Region}'
+  StackName:
+    Value: '#{AWS::StackName}'
