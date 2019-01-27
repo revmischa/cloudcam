@@ -1,27 +1,17 @@
 import store from '../store'
 import MQTT from 'paho-mqtt'
-import AWS from 'aws-sdk'
-import { Auth } from 'aws-amplify'
 import SigV4Utils from './sigv4'
 import * as CCStack from '../aws-stack.json'
+import { Auth } from "aws-amplify";
 import { default as J } from '../vendor/janus.es'
+import { ccAWS } from './aws';
 
 // FIXME: janus needs TS decl
 const Janus = J as any
 
 export class IoTClient {
   private mqttClient: MQTT.Client | undefined
-
-  private async getLambdaClient(): Promise<AWS.Lambda> {
-    const credentials = await Auth.currentCredentials()
-    return new AWS.Lambda({ credentials: Auth.essentialCredentials(credentials) });
-  }
-
-  private async invokeLambda(params: AWS.Lambda.InvocationRequest, callback?: (err: AWS.AWSError, data: AWS.Lambda.InvocationResponse) => void): Promise<AWS.Request<AWS.Lambda.InvocationResponse, AWS.AWSError>> {
-    // params.FunctionName = `${CCStack.StackName}-${params.FunctionName}`
-    const client = await this.getLambdaClient()
-    return client.invoke(params, callback)
-  }
+  private ccAws = ccAWS
 
   isMqttConnected(): boolean {
     if (!this.mqttClient) 
@@ -44,14 +34,11 @@ export class IoTClient {
           setTimeout(() => this.mqttConnect(), 1000);
         }
       };
-      this.mqttClient.onMessageArrived = (message) => {
+      this.mqttClient.onMessageArrived = (message: MQTT.Message) => {
         console.log("MQTT message to " + message.destinationName);
         let payload = JSON.parse(message.payloadString);
         console.log(payload);
-        let thingName = message.destinationName.match(/\$aws\/things\/([^\\]+)\/shadow\/update\/accepted/);
-        if (thingName && thingName[1]) {
-          this.shadowUpdateHandler(thingName[1], payload)
-        }
+        this.handleMQTTMessage(message, payload)
       };
       let connectOptions = {
         onSuccess: function () {
@@ -70,11 +57,29 @@ export class IoTClient {
     });
   }
 
+  private async handleMQTTMessage(message: MQTT.Message, payload) {
+    let thingName = message.destinationName.match(/\$aws\/things\/([^\\]+)\/shadow\/get\/accepted/);
+    if (thingName && thingName[1]) {
+      this.shadowUpdateHandler(thingName[1], payload)
+    }
+
+    thingName = message.destinationName.match(/\$aws\/things\/([^\\]+)\/shadow\/update\/accepted/);
+    if (thingName && thingName[1]) {
+      this.shadowUpdateHandler(thingName[1], payload)
+    }
+
+  }
+
   // request new thumbnails every 10s
   private reqThumbsProcHandle: NodeJS.Timeout
-  requestThumbsProcess() {
+  private async requestThumbsProcess() {
     if (this.reqThumbsProcHandle)
       clearTimeout(this.reqThumbsProcHandle);
+
+    // stop refreshing if not logged in
+    if (! await this.ccAws.checkAuthExists())
+      return
+
     this.requestThumbs(Object.keys(store.getState().iot.things));
     this.reqThumbsProcHandle = setTimeout(this.requestThumbsProcess.bind(this), 10000);
   }
@@ -89,6 +94,20 @@ export class IoTClient {
         },
         onFailure: function (err) {
           console.log("mqtt subscription to " + thingName + " shadow updates failed: " + JSON.stringify(err))
+          reject(err);
+        }
+      });
+    });
+  }
+  subscribeToShadowGet(thingName) {
+    return new Promise((resolve, reject) => {
+      this.mqttClient.subscribe("$aws/things/" + thingName + "/shadow/get/accepted", {
+        onSuccess: function () {
+          console.log("mqtt subscription to " + thingName + " shadow get succeeded");
+          resolve();
+        },
+        onFailure: function (err) {
+          console.log("mqtt subscription to " + thingName + " shadow get failed: " + JSON.stringify(err))
           reject(err);
         }
       });
@@ -117,6 +136,14 @@ export class IoTClient {
   //   }
   // }
 
+  // get thing shadows
+  private getShadows() {
+    Object.keys(store.getState().iot.things).forEach(thingName => {
+      console.log("thing", thingName)
+      this.getShadow(thingName)
+    })
+  }
+
   // updates the specified thing shadow
   updateShadow(thingName, doc) {
     let message = new MQTT.Message(JSON.stringify(doc));
@@ -124,11 +151,19 @@ export class IoTClient {
     this.mqttClient.send(message);
   }
 
+  // updates the specified thing shadow
+  getShadow(thingName) {
+    let message = new MQTT.Message('');
+    message.destinationName = "$aws/things/" + thingName + "/shadow/get";
+    console.log("getting shadow", message.destinationName)
+    this.mqttClient.send(message);
+  }
+  
   // takes over a specified thing
   attachThingPolicy(thingName) {
     return new Promise((resolve, reject) => {
       console.log('invoking iot_attach_thing_policy:');
-      this.invokeLambda({
+      this.ccAws.invokeLambda({
         FunctionName: CCStack.IoTAttachThingPolicyLambdaFunctionQualifiedArn,
         Payload: JSON.stringify({
           thingName: thingName
@@ -151,7 +186,7 @@ export class IoTClient {
   provisionThing(thingName) {
     return new Promise((resolve, reject) => {
       console.log('invoking iot_provision_thing:');
-      this.invokeLambda({
+      this.ccAws.invokeLambda({
         FunctionName: CCStack.IoTProvisionThingLambdaFunctionQualifiedArn,
         Payload: JSON.stringify({
           thingName: thingName
@@ -171,11 +206,11 @@ export class IoTClient {
     });
   }
 
-  // getsa a list of things current Cognito identity has access to
-  refreshThings() {
+  // gets a list of things current Cognito identity has access to
+  async refreshThings(): Promise<any> {
     return new Promise((resolve, reject) => {
       console.log('invoking iot_list_things:');
-      this.invokeLambda({
+      this.ccAws.invokeLambda({
         FunctionName: CCStack.IoTListThingsLambdaFunctionQualifiedArn,
         Payload: ""
       }, (err, data) => {
@@ -191,11 +226,10 @@ export class IoTClient {
           });
           this.requestThumbsProcess();
           var subscribeFn = () => {
-            result.thingNames.map((name) => {
-              this.subscribeToShadowUpdates(name)
-                .catch(e => {
-                  console.log(e);
-                });
+            result.thingNames.map(async (name) => {
+              await this.subscribeToShadowUpdates(name)
+              await this.subscribeToShadowGet(name)
+              await this.getShadow(name)
             });
           };
           if (!this.isMqttConnected()) {
@@ -222,7 +256,7 @@ export class IoTClient {
           thingNames: thingNames
         })
       };
-      this.invokeLambda(params, function (err, data) {
+      this.ccAws.invokeLambda(params, function (err, data) {
         if (err) {
           console.log(err);
           reject(err);
@@ -250,7 +284,7 @@ export class IoTClient {
           // forceReallocate: true
         })
       };
-      this.invokeLambda(params, (err, data) => {
+      this.ccAws.invokeLambda(params, (err, data) => {
         if (err) {
           console.log(err);
           reject(err);
@@ -368,7 +402,7 @@ export class IoTClient {
           thingName: thingName
         })
       };
-      this.invokeLambda(params, (err, data) => {
+      this.ccAws.invokeLambda(params, (err, data) => {
         if (err) {
           console.log(err);
           reject(err);
