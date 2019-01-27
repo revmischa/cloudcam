@@ -1,6 +1,9 @@
-# About
 Modern software for manipulating live video streams from IP cameras.
+
+Based on Serverless, AWS Lambda and AWS IoT.
+
 [Explanation of this project.](http://spiegelmock.com/2016/03/27/diving-into-iot-development-using-aws/)
+
 [Digital video introduction](https://github.com/leandromoreira/digital_video_introduction) (technical background info).
 
 ## Related projects
