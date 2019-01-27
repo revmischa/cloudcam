@@ -15,16 +15,25 @@ The backend services will be provided by AWS IoT, Lambda and S3.
 This is based on open source as much as humanly possible. Contributions are encouraged and welcome.
 There is full support for embedded linux. Video streaming will be done with gstreamer.
 
-### Building:
+### Building Client:
 1. Install Dependencies:
   * Debian/Ubuntu: `sudo apt install libgstreamer1.0-dev python3-pip`
 2. Type `make`
-3. [Report any issues](https://github.com/revmischa/cloudcam/issues/new)
 
-### Setting up AWS infrastructure
+### Deploy
 1. Install AWS CLI and authenticate
-2. Run `cd cloudformation && ./deploy-stack.sh`
-3. (optional) Run `cd cloudformation && ./encrypt-ssl-key.sh` to encrypt the SSL private key (`certs/$domain/server.key`) for the Janus gateway subdomain with the key managed by the AWS KMS and replace the `janus_encrypted_ssl_key_pem` value in `janus_scale_lightsail.py` with the result (note: this must be run as either as AWS root user or user specified in JANUS_KMS_KEY_USER_ARN in step 2)
+1. Install [serverless](https://serverless.com/)
+1. `yarn`
+1. Run `sls deploy`
+
+### Frontend
+```
+cd ui
+yarn
+yarn start
+```
+
+(optional) Run `cd cloudformation && ./encrypt-ssl-key.sh` to encrypt the SSL private key (`certs/$domain/server.key`) for the Janus gateway subdomain with the key managed by the AWS KMS and replace the `janus_encrypted_ssl_key_pem` value in `janus_scale_lightsail.py` with the result (note: this must be run as either as AWS root user or user specified in JANUS_KMS_KEY_USER_ARN in step 2)
 
 
 ### Architecture
