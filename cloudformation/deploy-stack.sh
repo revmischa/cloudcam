@@ -41,7 +41,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #       since multi-region cloudformation templates are complicated, we create them using the aws cli here
 JANUS_HEALTH_CHECK_ALARMS_TOPIC_ARN=`aws sns create-topic --region us-east-1 --name ${JANUS_HEALTH_CHECK_ALARMS_TOPIC} --output text`
 JANUS_HEALTH_CHECK_ALARMS_ENDPOINT_ARN=arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:janus_scale_lightsail
- 
+
 # ensure S3_CODE_BUCKET exists
 aws s3 mb s3://${S3_CODE_BUCKET}
 
