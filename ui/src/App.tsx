@@ -33,8 +33,7 @@ class App extends Component {
     return (
       <Provider store={store}>
         <Router>
-          <DefaultLayout>
-            
+          <DefaultLayout>           
             <Route exact path="/" component={CameraList} />
             <Route exact path="/provision" component={Provision} />
           </DefaultLayout>
