@@ -33,7 +33,7 @@ class Provision extends React.Component {
     const {thingConfig} = this.props
     return (
       <div className='section form is-large'>
-        <h2 className='title'>provision</h2>
+        <h2 className='title'>Provision</h2>
         <div className='columns'>
           <div className='column is-medium'>
             <div className='notification'>

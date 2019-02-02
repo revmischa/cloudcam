@@ -18,6 +18,7 @@ import FormControlLabel from "@material-ui/core/FormControlLabel";
 import FormGroup from "@material-ui/core/FormGroup";
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
+import Button from '@material-ui/core/Button';
 
 export interface IHeaderProps extends WithStyles<typeof styles> {}
 
@@ -31,6 +32,9 @@ const styles = createStyles({
   menuButton: {
     marginLeft: -12,
     marginRight: 20
+  },
+  menuLink: {
+    color: '#B0E9FF'
   }
 });
 
@@ -51,6 +55,8 @@ class Header extends React.Component<IHeaderProps, any> {
     const { classes } = this.props;
     const { anchorEl } = this.state;
     const open = Boolean(anchorEl);
+    const ProvisionLink = props => <Link to="/provision" {...props} />
+    const CamerasLink = props => <Link to="/" {...props} />
 
     return (
       <div className={classes.root}>
@@ -64,8 +70,20 @@ class Header extends React.Component<IHeaderProps, any> {
               <MenuIcon />
             </IconButton>
             <Typography variant="h6" color="inherit" className={classes.grow}>
-            <Link to="/provision">Provision</Link>
-            <Link to="/">Cameras</Link>
+            <Button 
+              component={ProvisionLink} 
+              className={classes.menuLink}
+            >
+              Provision
+            </Button>
+            <Button 
+              component={CamerasLink}
+              className={classes.menuLink}
+            >
+              Cameras
+            </Button>
+            {/* <Link to="/provision">Provision</Link> */}
+            {/* <Link to="/">Cameras</Link> */}
             </Typography>
             <div>
               <IconButton

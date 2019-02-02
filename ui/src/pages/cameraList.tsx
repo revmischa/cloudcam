@@ -2,6 +2,7 @@ import * as React from 'react'
 import {connect} from 'react-redux'
 import {IoTClient} from '../api/iot'
 
+
 interface ICamera {
   name: string
   thumbUrl?: string
@@ -37,11 +38,11 @@ class CameraList extends React.Component<ICameraListProps, any> {
               {Object.entries(things).map(function ([key, thing]) {
                 return <li key={thing.name}>
                   <div>
-                    <p>
+                    <div className="thumb-block">
                       <img id={thing.name} className='thumb' style={{display: thing.isStreaming ? 'none' : 'block'}}
-                           src={thing.thumbUrl}/>
+                           src={thing.isStreaming ? thing.thumbUrl : 'images/no-video.png'}/>
                       <video id={thing.name} style={{display: thing.isStreaming ? 'block' : 'none'}} autoPlay/>
-                    </p>
+                    </div>
                     {thing.name}&nbsp;
                     <a style={{display: thing.isStreaming ? 'none' : 'inline-block'}} href="#"
                        onClick={() => client.requestThumbs([thing.name])}>refresh</a>&nbsp;

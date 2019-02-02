@@ -26,3 +26,13 @@
     transform: rotate(360deg);
   }
 }
+
+/* Cameras page */
+
+.thumb-block {
+  max-width: 400px;
+}
+
+.thumb {
+  width: 100%;
+}
