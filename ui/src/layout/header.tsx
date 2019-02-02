@@ -69,6 +69,15 @@ class Header extends React.Component<IHeaderProps, any> {
             >
               <MenuIcon />
             </IconButton>
+            <Typography
+              variant="title"
+              noWrap
+              style={{
+                marginRight: '40px'
+              }}>
+              <a href="/" className={"App-link"}><img src="/images/cloudcam-light.svg" className="App-logo" alt="logo" />
+              </a>
+            </Typography>
             <Typography variant="h6" color="inherit" className={classes.grow}>
             <Button 
               component={ProvisionLink} 
