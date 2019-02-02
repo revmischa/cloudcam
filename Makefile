@@ -17,7 +17,7 @@ AXIS_DIR = axis
 ###### --- deps
 IOT_CLIENT_DIR = $(VENDOR_DIR)/aws_iot_client
 MBEDTLS_DIR = $(VENDOR_DIR)/mbedtls_lib
-LIBCURL_PKG = $(VENDOR_DIR)/curl-7.54.0
+LIBCURL_PKG = $(VENDOR_DIR)/curl-7.61.0
 JANSSON_DIR = $(VENDOR_DIR)/jansson-2.9
 
 ###### --- log level control
@@ -46,10 +46,11 @@ INCLUDE_DIRS += -I $(JANSSON_DIR)/build/include
 INCLUDE_DIRS += `pkg-config --cflags gstreamer-1.0`
 
 ###### --- link flags
-TLS_LIB_FILES = -L$(TLS_LIB_DIR) -l:libmbedtls.a -l:libmbedcrypto.a -l:libmbedx509.a
-LDFLAGS += -L$(CURL_LIB_DIR) -l:libcurl.a -lz
-LDFLAGS += -L$(JANSSON_LIB_DIR) -l:libjansson.a
-LDFLAGS += -L$(VENDOR_DIR) -laws-iot
+TLS_LIB_FILES = -L$(TLS_LIB_DIR) -lmbedtls -lmbedcrypto -lmbedx509
+LDFLAGS += $(CURL_LIB_DIR)/libcurl.a
+LDFLAGS += -lz
+LDFLAGS += $(JANSSON_LIB_DIR)/libjansson.a
+LDFLAGS += $(VENDOR_DIR)/libaws-iot.a
 LDFLAGS += $(TLS_LIB_FILES) -lpthread
 LDFLAGS += `pkg-config --libs gstreamer-1.0`
 

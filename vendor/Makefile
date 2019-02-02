@@ -3,7 +3,7 @@ JANSSON_VERSION = 2.9
 # our dep dirs
 IOT_CLIENT_DIR = aws_iot_client
 MBEDTLS_DIR = mbedtls_lib
-LIBCURL_PKG = curl-7.54.0
+LIBCURL_PKG = curl-7.61.0
 JANSSON_DIR = jansson-$(JANSSON_VERSION)
 
 
@@ -65,8 +65,8 @@ $(BUILT_AWS_LIB): $(AWS_OBJS) | $(TLS_LIB_FILES)
 	ar rcs $(AWS_LIB) $(AWS_OBJS)
 	touch $(BUILT_AWS_LIB)
 # make libcurl
-$(BUILT_LIBCURL): $(TLS_LIB_FILES) 
-	cd $(LIBCURL_DIR) && ./configure --disable-shared --without-ssl --with-mbedtls=$(PWD)/vendor/${MBEDTLS_DIR}/build --prefix=$(PWD)/vendor/$(LIBCURL_DIR)/build
+$(BUILT_LIBCURL): $(TLS_LIB_FILES)
+	cd $(LIBCURL_DIR) && ./configure --disable-shared --disable-ldap --without-ssl --with-mbedtls=$(PWD)/vendor/${MBEDTLS_DIR}/build --prefix=$(PWD)/vendor/$(LIBCURL_DIR)/build
 	make -C $(LIBCURL_DIR) -j3
 	make -C $(LIBCURL_DIR) install
 	touch $(BUILT_LIBCURL)
