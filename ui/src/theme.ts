@@ -13,9 +13,10 @@ palette: {
             },
             secondary: {
                 light: '#B0E9FF',
-                main: '#3edcff',
+                // main: '#3edcff',
+                main: '#B0E9FF',
                 dark: '#00aacc',
-                contrastText: '#fff'
+                contrastText: '#000'
             },
             // accent: {
             //   light: '#6abaff',
