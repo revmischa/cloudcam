@@ -7,6 +7,8 @@ import CameraList from './pages/cameraList'
 import {Provider} from 'react-redux'
 import store from './store'
 import DefaultLayout from './layout'
+import {MuiThemeProvider} from '@material-ui/core/styles';
+import theme from './theme'
 
 const signUpConfig = {
   signUpFields: [
@@ -31,15 +33,16 @@ const signUpConfig = {
 class App extends Component {
   render() {
     return (
-      <Provider store={store}>
-        <Router>
-          <DefaultLayout>
-            
-            <Route exact path="/" component={CameraList} />
-            <Route exact path="/provision" component={Provision} />
-          </DefaultLayout>
-        </Router>
-      </Provider>
+      <MuiThemeProvider theme={theme}>
+        <Provider store={store}>
+          <Router>
+            <DefaultLayout>           
+              <Route exact path="/" component={CameraList} />
+              <Route exact path="/provision" component={Provision} />
+            </DefaultLayout>
+          </Router>
+        </Provider>
+      </MuiThemeProvider>
     );
   }
 }
