@@ -287,6 +287,8 @@ def handler(event, context):
     current_instance_count = len(instances)
 
     # required_instance_count is specified, add/remove instances until the actual count matches the required_instance_count
+    deleted_instance = False
+    created_instance = False
     if required_instance_count is not None:
         logger.info(
             f'Janus instance required count: {required_instance_count}, current count: {current_instance_count}')
@@ -294,9 +296,11 @@ def handler(event, context):
             for _ in range(current_instance_count - required_instance_count):
                 remove_janus_instance(instances[-1]['name'])
                 instances.pop()
+                deleted_instance = True
         elif current_instance_count < required_instance_count:
             for _ in range(required_instance_count - current_instance_count):
                 create_janus_instance()
+                created_instance = True
 
     # if we are called via health check alarm actions, replace dead instances with new ones
     if alarms:
@@ -309,3 +313,10 @@ def handler(event, context):
                 logger.info(f'Instance {instance_name} is dead, replacing it with a new one')
                 remove_janus_instance(instance_name)
                 create_janus_instance()
+
+
+    return {
+        'current_count': current_instance_count,
+        'deleted_instance': deleted_instance,
+        'created_instance': created_instance,
+    }

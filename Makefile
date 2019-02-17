@@ -56,7 +56,7 @@ LDFLAGS += $(TLS_LIB_FILES) -lpthread
 LDFLAGS += `pkg-config --libs gstreamer-1.0`
 
 ###### --- compile flags
-CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS)
+CFLAGS += $(INCLUDE_DIRS) $(LOG_FLAGS) -g
 
 ###### --- header deps
 DEPS = $(SRCS:.c=.d)

@@ -59,7 +59,7 @@ package:
 
 functions:
   IoTListThings:
-    memory: 128
+    memorySize: 128
     timeout: 10
     handler: cloudcam/iot_list_things.handler
     events:
@@ -69,11 +69,11 @@ functions:
   IoTProvisionThing:
     handler: cloudcam/iot_provision_thing.handler
     timeout: 10
-    memory: 128
+    memorySize: 128
     role: !GetAtt [IotProvisionThingLambdaRole, Arn]
 
   IoTAttachThingPolicy:
-    memory: 128
+    memorySize: 128
     role: !GetAtt [IotAttachThingPolicyLambdaRole, Arn]
     handler: cloudcam/iot_attach_thing_policy.handler
 
@@ -94,13 +94,13 @@ functions:
   CognitoPresignup:
     role: !GetAtt [CognitoPresignupLambdaRole, Arn]
     handler: cloudcam/cognito_presignup.handler
-    memory: 128
+    memorySize: 128
 
   JanusStartStream:
     role: !GetAtt [JanusStartStreamLambdaRole, Arn]
     handler: cloudcam/janus_start_stream.handler
     timeout: 10
-    memory: 128
+    memorySize: 128
     environment:
       JANUS_HOSTED_ZONE_DOMAIN: ${self:custom.cloudcam.janus.hosted_zone_domain}
       JANUS_INSTANCE_NAME_PREFIX: ${self:custom.cloudcam.janus.instance_name_prefix}
@@ -108,7 +108,7 @@ functions:
     role: !GetAtt [JanusStopStreamLambdaRole, Arn]
     handler: cloudcam/janus_stop_stream.handler
     timeout: 10
-    memory: 128
+    memorySize: 128
 
   JanusScaleLightsail:
     role: !GetAtt [JanusScaleLightsailLambdaRole, Arn]

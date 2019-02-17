@@ -117,7 +117,8 @@ static gboolean update_stream_params_cb(gpointer user_data) {
     INFO("update_stream_params_cb(): RTP sink: %s:%d", ctx->rtp_host, ctx->rtp_port);
     g_object_set(G_OBJECT(ctx->udpsink), "host", ctx->rtp_host, "port", (gint)ctx->rtp_port, NULL);
   }
-  g_free(prev_rtp_host);
+  // FIXME:
+  //  g_free(prev_rtp_host);
   pthread_mutex_unlock(&ctx->params_mutex);
   return G_SOURCE_CONTINUE;
 }
