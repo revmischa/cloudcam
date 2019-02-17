@@ -3,11 +3,10 @@ import { Link } from "react-router-dom";
 import AppBar from "@material-ui/core/AppBar";
 import { Auth } from "aws-amplify";
 import {
-  makeStyles,
   createStyles,
   WithStyles,
   withStyles
-} from "@material-ui/styles";
+} from "@material-ui/core/styles";
 import Toolbar from "@material-ui/core/Toolbar";
 import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
@@ -20,6 +19,8 @@ import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
 import Button from '@material-ui/core/Button';
 import { Theme } from '@material-ui/core/styles/createMuiTheme';
+import SvgCloudcamLight from './../components/SvgCloudcamLight'
+
 
 export interface IHeaderProps extends WithStyles<typeof styles> {}
 
@@ -35,7 +36,7 @@ const styles = ({ palette }: Theme) => createStyles({
     marginRight: 20
   },
   menuLink: {
-    // color: palette.secondary.light
+    color: palette.secondary.light
   }
 });
 
@@ -74,9 +75,10 @@ class Header extends React.Component<IHeaderProps, any> {
               variant="title"
               noWrap
               style={{
-                marginRight: '40px'
+                marginRight: '3rem'
               }}>
-              <a href="/" className={"App-link"}><img src="/images/cloudcam-light.svg" className="App-logo" alt="logo" />
+              <a href="/" className={"App-link"}>
+                <SvgCloudcamLight className="App-logo" alt="logo"></SvgCloudcamLight>
               </a>
             </Typography>
             <Typography variant="h6" color="inherit" className={classes.grow}>
