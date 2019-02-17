@@ -19,10 +19,11 @@ import FormGroup from "@material-ui/core/FormGroup";
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
 import Button from '@material-ui/core/Button';
+import { Theme } from '@material-ui/core/styles/createMuiTheme';
 
 export interface IHeaderProps extends WithStyles<typeof styles> {}
 
-const styles = createStyles({
+const styles = ({ palette }: Theme) => createStyles({
   root: {
     flexGrow: 1
   },
@@ -34,7 +35,7 @@ const styles = createStyles({
     marginRight: 20
   },
   menuLink: {
-    color: '#B0E9FF'
+    // color: palette.secondary.light
   }
 });
 
