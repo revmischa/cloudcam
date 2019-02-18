@@ -24,7 +24,8 @@ int main(int argc, char** argv)
   action.sa_handler = term;
   sigaction(SIGTERM, &action, NULL);
   // change dir to the package directory todo: make configurable
-  chdir("/usr/local/packages/launcher");
+  chdir("/usr/local/packages/cloudcam");
   // launch the rust executable, piping logs into syslog
-  return system("RUST_BACKTRACE=full RUST_LOG=info ./cloudcam 2>&1 | logger");
+  /* return system("RUST_BACKTRACE=full RUST_LOG=info ./cloudcam-exec 2>&1"); */
+  return system("RUST_BACKTRACE=full RUST_LOG=info ./cloudcam-exec 2>&1 | logger");
 }

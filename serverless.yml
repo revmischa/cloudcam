@@ -61,7 +61,7 @@ functions:
   IoTListThings:
     memorySize: 128
     timeout: 10
-    handler: cloudcam/iot_list_things.handler
+    handler: cloudcam.iot_list_things.handler
     events:
       - http: GET /list_things
     role: !GetAtt [IotListThingsLambdaRole, Arn]

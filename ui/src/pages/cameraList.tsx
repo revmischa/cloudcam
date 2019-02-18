@@ -86,7 +86,7 @@ class CameraList extends React.Component<ICameraListProps, any> {
                     </Typography>
                     <div className="thumb-block">
                       <img id={thing.name} className='thumb' style={{display: thing.isStreaming ? 'none' : 'block'}}
-                           src={thing.isStreaming ? thing.thumbUrl : 'images/no-video.png'}/>
+                           src={thing.thumbUrl ? thing.thumbUrl : 'images/no-video.png'}/>
                       <video id={thing.name} style={{display: thing.isStreaming ? 'block' : 'none'}} autoPlay/>
                     </div>
                   </CardContent>

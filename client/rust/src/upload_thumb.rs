@@ -22,13 +22,13 @@ pub fn exec(config: &Config, payload: &serde_json::Value) -> Result<Option<Vec<u
     // adding needed trust roots via TlsConnector, upload over http instead
     let uri = payload["upload_url"].as_str().unwrap().replace("https", "http").parse()?;
     let mut req: Request<Body> = Request::new(Method::Put, uri);
-    // get shapshot via native lib, vapix api or from a local file
+    // get snapshot via native lib, vapix api or from a local file
     let buf = axis_native::get_jpeg_snapshot(config).unwrap_or(
         axis_vapix::get_jpeg_snapshot(config).unwrap_or_else(|_| {
             let mut buf: Vec<u8> = Vec::new();
             File::open("sample/snowdino.jpg").and_then(|mut f| f.read_to_end(&mut buf)).is_ok();
             buf
-        }));
+    }));
     req.headers_mut().set(ContentLength(buf.len() as u64));
     info!("uploading {} bytes to {:?}", buf.len(), payload["upload_url"].as_str());
     req.set_body(buf);
