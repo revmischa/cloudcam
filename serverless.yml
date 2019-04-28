@@ -15,6 +15,9 @@ custom:
       hosted_zone_id: Z28O6A5M6DDPL6
       instance_name_prefix: '#{AWS::StackName}-stream'
     ui_bucket_name: '#{AWS::StackName}-ui'
+    userIoTPolicyName: "#{AWS::StackName}-user-IoT-policy"
+    cameraIoTPolicyName: "#{AWS::StackName}-camera-IoT-policy"
+    defaultLambdaMemorySize: 256
   output:
     file: ui/src/aws-stack.json
   pythonRequirements:
@@ -23,13 +26,13 @@ custom:
     useDownloadCache: true
     useStaticCache: true
     noDeploy:
-      - psycopg2
       - boto3
       - botocore
       - docutils
+      - regex
 
   # customDomain:
-    # domainName: inixy-api.jetbridge.com
+    # domainName: cloudcam.io
     # stage: ${self:provider.stage}
     # createRoute53Record: true
 
@@ -40,6 +43,7 @@ provider:
   stage: ${opt:stage, 'dev'}
   # profile: default
   region: us-west-2
+  variableSyntax: "\\${((?!(iot)|(AWS))[ ~:a-zA-Z0-9._@'\",\\-\\/\\(\\)]+?)}"
 
   iamRoleStatements:
     - Effect: Allow
@@ -59,7 +63,7 @@ package:
 
 functions:
   IoTListThings:
-    memorySize: 128
+    memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
     timeout: 10
     handler: cloudcam.iot_list_things.handler
     events:
@@ -69,13 +73,22 @@ functions:
   IoTProvisionThing:
     handler: cloudcam/iot_provision_thing.handler
     timeout: 10
-    memorySize: 128
-    role: !GetAtt [IotProvisionThingLambdaRole, Arn]
+    memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
+    role: !GetAtt [IoTProvisionThingLambdaRole, Arn]
 
-  IoTAttachThingPolicy:
-    memorySize: 128
-    role: !GetAtt [IotAttachThingPolicyLambdaRole, Arn]
-    handler: cloudcam/iot_attach_thing_policy.handler
+  IoTAttachCameraPolicy:
+    memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
+    role: !GetAtt [IoTAttachCameraPolicyLambdaRole, Arn]
+    handler: cloudcam/iot_attach_camera_policy.handler
+    environment:
+       CAMERA_IOT_POLICY_NAME: !Ref CameraIoTPolicy
+
+  IoTAttachUserPolicy:
+    memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
+    role: !GetAtt [IoTAttachUserPolicyLambdaRole, Arn]
+    handler: cloudcam/iot_attach_user_policy.handler
+    environment:
+       User_IOT_POLICY_NAME: !Ref UserIoTPolicy
 
   ThumbStore:
     role: !GetAtt [ThumbStoreRole, Arn]
@@ -94,34 +107,38 @@ functions:
   CognitoPresignup:
     role: !GetAtt [CognitoPresignupLambdaRole, Arn]
     handler: cloudcam/cognito_presignup.handler
-    memorySize: 128
+    memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
 
-  JanusStartStream:
-    role: !GetAtt [JanusStartStreamLambdaRole, Arn]
-    handler: cloudcam/janus_start_stream.handler
-    timeout: 10
-    memorySize: 128
-    environment:
-      JANUS_HOSTED_ZONE_DOMAIN: ${self:custom.cloudcam.janus.hosted_zone_domain}
-      JANUS_INSTANCE_NAME_PREFIX: ${self:custom.cloudcam.janus.instance_name_prefix}
-  JanusStopStream:
-    role: !GetAtt [JanusStopStreamLambdaRole, Arn]
-    handler: cloudcam/janus_stop_stream.handler
-    timeout: 10
-    memorySize: 128
+  # JanusStartStream:
+  #   role: !GetAtt [JanusStartStreamLambdaRole, Arn]
+  #   handler: cloudcam/janus_start_stream.handler
+  #   timeout: 10
+  #   memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
+  #   environment:
+  #     JANUS_HOSTED_ZONE_DOMAIN: ${self:custom.cloudcam.janus.hosted_zone_domain}
+  #     JANUS_INSTANCE_NAME_PREFIX: ${self:custom.cloudcam.janus.instance_name_prefix}
+  # JanusStopStream:
+  #   role: !GetAtt [JanusStopStreamLambdaRole, Arn]
+  #   handler: cloudcam/janus_stop_stream.handler
+  #   timeout: 10
+  #   memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
 
-  JanusScaleLightsail:
-    role: !GetAtt [JanusScaleLightsailLambdaRole, Arn]
-    name: ${self:provider.stage}-janus_scale_lightsail
-    handler: cloudcam/janus_scale_lightsail.handler
-    timeout: 300
-    environment:
-      LIGHTSAIL_AZS: !Ref LightsailAzs
-      LIGHTSAIL_BLUEPRINT_ID: !Ref LightsailBlueprintId
-      LIGHTSAIL_BUNDLE_ID: !Ref LightsailBundleId
-      LIGHTSAIL_JANUS_IMAGE: !Ref LightsailJanusImage
-      JANUS_HOSTED_ZONE_ID: ${self:custom.cloudcam.janus.hosted_zone_id}
-      JANUS_HOSTED_ZONE_DOMAIN: ${self:custom.cloudcam.janus.hosted_zone_domain}
-      JANUS_INSTANCE_NAME_PREFIX: ${self:custom.cloudcam.janus.instance_name_prefix}
+  # JanusScaleLightsail:
+  #   role: !GetAtt [JanusScaleLightsailLambdaRole, Arn]
+  #   name: ${self:provider.stage}-janus_scale_lightsail
+  #   handler: cloudcam/janus_scale_lightsail.handler
+  #   timeout: 300
+  #   environment:
+  #     LIGHTSAIL_AZS: !Ref LightsailAzs
+  #     LIGHTSAIL_BLUEPRINT_ID: !Ref LightsailBlueprintId
+  #     LIGHTSAIL_BUNDLE_ID: !Ref LightsailBundleId
+  #     LIGHTSAIL_JANUS_IMAGE: !Ref LightsailJanusImage
+  #     JANUS_HOSTED_ZONE_ID: ${self:custom.cloudcam.janus.hosted_zone_id}
+  #     JANUS_HOSTED_ZONE_DOMAIN: ${self:custom.cloudcam.janus.hosted_zone_domain}
+  #     JANUS_INSTANCE_NAME_PREFIX: ${self:custom.cloudcam.janus.instance_name_prefix}
 
-resources: ${file(cloudformation/cloudcam.yml)}
+resources:
+  - ${file(cloudformation/iot.yml)}
+  - ${file(cloudformation/lambda_roles.yml)}
+  - ${file(cloudformation/s3.yml)}
+  - ${file(cloudformation/cognito.yml)}

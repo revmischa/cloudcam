@@ -1,4 +1,3 @@
-import json
 import logging
 import boto3
 from slugify import slugify
@@ -30,9 +29,7 @@ def handler(event, context):
     if not identity_id:
         raise Exception("Cognito identity not present")
 
-    policies = iot.list_principal_policies(
-        principal=identity_id
-    )['policies']
+    policies = iot.list_principal_policies(principal=identity_id)['policies']
 
     thing_names = []
     for policy in policies:

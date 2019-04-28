@@ -1,26 +1,42 @@
-import { Auth } from "aws-amplify";
-import AWS from "aws-sdk";
+import { Auth } from 'aws-amplify'
+import AWS from 'aws-sdk'
+import { InvocationResponse } from 'aws-sdk/clients/lambda'
 
 class CCAWS {
   public async checkAuthExists(): Promise<boolean> {
-    try { await Auth.currentAuthenticatedUser(); return true } catch(e) { return false } 
+    try {
+      await Auth.currentAuthenticatedUser()
+      return true
+    } catch (e) {
+      return false
+    }
   }
 
   public async getLambdaClient(): Promise<AWS.Lambda> {
-    const credentials = await Auth.currentCredentials();
+    const credentials = await Auth.currentCredentials()
     return new AWS.Lambda({
-      credentials: Auth.essentialCredentials(credentials)
-    });
+      credentials: Auth.essentialCredentials(credentials),
+    })
   }
 
+  /**
+   * Wrap lambda invoke in a sane async interface.
+   */
   public async invokeLambda(
     params: AWS.Lambda.InvocationRequest,
     callback?: (err: AWS.AWSError, data: AWS.Lambda.InvocationResponse) => void
-  ): Promise<AWS.Request<AWS.Lambda.InvocationResponse, AWS.AWSError>> {
-    // params.FunctionName = `${CCStack.StackName}-${params.FunctionName}`
-    const client = await this.getLambdaClient();
-    return client.invoke(params, callback);
+  ): Promise<InvocationResponse> {
+    const client = await this.getLambdaClient()
+
+    return new Promise((resolve, reject) => {
+      client.invoke(params, (err, data) => {
+        if (callback) callback(err, data)
+
+        if (err) return reject(err)
+        return resolve(data)
+      })
+    })
   }
 }
 
-export const ccAWS = new CCAWS();
+export const ccAWS = new CCAWS()
