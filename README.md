@@ -16,6 +16,7 @@ There is full support for embedded linux. Video streaming will be done with gstr
 ### Building Client:
 * Install Dependencies:
   * Debian/Ubuntu: `sudo apt install libgstreamer1.0-dev python3-pip yarn`
+  * macOS: `brew install gstreamer  libsoup json-glib sqlite3`
 * Type `make`
 
 ### Deploy:

@@ -8560,11 +8560,6 @@ react-app-polyfill@^1.0.0:
     regenerator-runtime "0.13.2"
     whatwg-fetch "3.0.0"
 
-react-copy-code@^2.0.1:
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/react-copy-code/-/react-copy-code-2.1.1.tgz#2bff622ea5ced33cb61615ce8fa7de62604104d9"
-  integrity sha512-grdZjE7Z+vdf101UDWMPuNcxETNl/4j6lAJpHk31USHg1/7WotJqCGPKFWDjjBoR10WnN4QbOrrCT0x7+I0WEQ==
-
 react-dev-utils@^9.0.0:
   version "9.0.0"
   resolved "https://registry.yarnpkg.com/react-dev-utils/-/react-dev-utils-9.0.0.tgz#356d95db442441c5d4748e0e49f4fd1e71aecbbd"
