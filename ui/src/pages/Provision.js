@@ -4,6 +4,8 @@ import {connect} from 'react-redux'
 import FormProvision from '../components/FormProvision'
 import store from '../store'
 import {IoTClient} from '../api/iot'
+import JSONPretty from 'react-json-pretty';
+import CodeBlock from 'react-copy-code';
 
 class Provision extends React.Component {
   constructor(props) {
@@ -33,12 +35,20 @@ class Provision extends React.Component {
     const {thingConfig} = this.props
     return (
       <div className='section form is-large'>
-        <h2 className='title'>provision</h2>
+        <h2 className='title'>Provision</h2>
         <div className='columns'>
           <div className='column is-medium'>
             <div className='notification'>
               {!thingConfig && <p>Provision a thing here.</p>}
               {thingConfig && <p>Device configuration:<br/>{JSON.stringify(thingConfig, null, 2)}</p>}
+              {/* <JSONPretty id="json-pretty" data={JSON.stringify(thingConfig, null, 2)}></JSONPretty>  */}
+              {/* <CodeBlock JSON>
+                <pre>
+                  <code>
+                    {JSON.stringify(thingConfig, null, 2)}
+                  </code>
+                </pre>
+              </CodeBlock>              */}
             </div>
           </div>
           <div className='column'>

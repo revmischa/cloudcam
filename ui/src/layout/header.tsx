@@ -3,11 +3,10 @@ import { Link } from "react-router-dom";
 import AppBar from "@material-ui/core/AppBar";
 import { Auth } from "aws-amplify";
 import {
-  makeStyles,
   createStyles,
   WithStyles,
   withStyles
-} from "@material-ui/styles";
+} from "@material-ui/core/styles";
 import Toolbar from "@material-ui/core/Toolbar";
 import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
@@ -18,10 +17,14 @@ import FormControlLabel from "@material-ui/core/FormControlLabel";
 import FormGroup from "@material-ui/core/FormGroup";
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
+import Button from '@material-ui/core/Button';
+import { Theme } from '@material-ui/core/styles/createMuiTheme';
+import SvgCloudcamLight from './../components/SvgCloudcamLight'
+
 
 export interface IHeaderProps extends WithStyles<typeof styles> {}
 
-const styles = createStyles({
+const styles = ({ palette }: Theme) => createStyles({
   root: {
     flexGrow: 1
   },
@@ -31,6 +34,9 @@ const styles = createStyles({
   menuButton: {
     marginLeft: -12,
     marginRight: 20
+  },
+  menuLink: {
+    color: palette.secondary.light
   }
 });
 
@@ -51,21 +57,36 @@ class Header extends React.Component<IHeaderProps, any> {
     const { classes } = this.props;
     const { anchorEl } = this.state;
     const open = Boolean(anchorEl);
+    const ProvisionLink = props => <Link to="/provision" {...props} />
+    const CamerasLink = props => <Link to="/" {...props} />
 
     return (
       <div className={classes.root}>
         <AppBar position="static">
           <Toolbar>
-            <IconButton
-              className={classes.menuButton}
-              color="inherit"
-              aria-label="Menu"
-            >
-              <MenuIcon />
-            </IconButton>
+            <Typography
+              variant="title"
+              noWrap
+              style={{
+                marginRight: '3rem'
+              }}>
+              <a href="/" className={"App-link"}>
+                <SvgCloudcamLight className="App-logo" alt="logo"></SvgCloudcamLight>
+              </a>
+            </Typography>
             <Typography variant="h6" color="inherit" className={classes.grow}>
-            <Link to="/provision">Provision</Link>
-            <Link to="/">Cameras</Link>
+            <Button 
+              component={ProvisionLink} 
+              className={classes.menuLink}
+            >
+              Provision
+            </Button>
+            <Button 
+              component={CamerasLink}
+              className={classes.menuLink}
+            >
+              Cameras
+            </Button>
             </Typography>
             <div>
               <IconButton
