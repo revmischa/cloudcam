@@ -51,7 +51,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - iot:DescribeEndpoint
+                  - iot:AttachPolicy
                 Resource: '*'
 
   IoTAttachUserPolicyLambdaRole:
@@ -123,10 +123,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - iot:DescribeEndpoint
-                  - iot:CreatePolicy
-                  - iot:DeletePolicy
-                  - iot:AttachPrincipalPolicy
-                  - iot:DetachPrincipalPolicy
+                  - iot:AttachPolicy
                   - iot:CreateThing
                   - iot:CreateKeysAndCertificate
                   - iot:AttachThingPrincipal

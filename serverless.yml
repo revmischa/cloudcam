@@ -25,11 +25,10 @@ custom:
     slim: true
     useDownloadCache: true
     useStaticCache: true
-    noDeploy:
-      - boto3
-      - botocore
-      - docutils
-      - regex
+    # noDeploy:
+    #   - boto3
+    #   - botocore
+    #   - docutils
 
   # customDomain:
     # domainName: cloudcam.io
@@ -75,7 +74,10 @@ functions:
     timeout: 10
     memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
     role: !GetAtt [IoTProvisionThingLambdaRole, Arn]
+    environment:
+       CAMERA_IOT_POLICY_NAME: !Ref CameraIoTPolicy
 
+  # unused - should delete
   IoTAttachCameraPolicy:
     memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
     role: !GetAtt [IoTAttachCameraPolicyLambdaRole, Arn]
@@ -83,10 +85,18 @@ functions:
     environment:
        CAMERA_IOT_POLICY_NAME: !Ref CameraIoTPolicy
 
+  # unused - should delete
   IoTAttachUserPolicy:
     memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
     role: !GetAtt [IoTAttachUserPolicyLambdaRole, Arn]
     handler: cloudcam/iot_attach_user_policy.handler
+    environment:
+       USER_IOT_POLICY_NAME: !Ref UserIoTPolicy
+
+  CognitoPresignup:
+    role: !GetAtt [CognitoPresignupLambdaRole, Arn]
+    handler: cloudcam/cognito_presignup.handler
+    memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
     environment:
        USER_IOT_POLICY_NAME: !Ref UserIoTPolicy
 
@@ -103,12 +113,6 @@ functions:
       - iot:
         name: ThumbStoreConnectedEvent
         sql: "SELECT * FROM '$aws/events/presence/connected/#'"
-
-  CognitoPresignup:
-    role: !GetAtt [CognitoPresignupLambdaRole, Arn]
-    handler: cloudcam/cognito_presignup.handler
-    memorySize: ${self:custom.cloudcam.defaultLambdaMemorySize}
-
   # JanusStartStream:
   #   role: !GetAtt [JanusStartStreamLambdaRole, Arn]
   #   handler: cloudcam/janus_start_stream.handler

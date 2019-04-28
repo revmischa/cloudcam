@@ -34,7 +34,7 @@ export class IoTClient {
   public async mqttConnect(): Promise<void> {
     // we must have our IoT policy attached to our cognito user before doing
     // any IoT shenanigans
-    if (!store.getState().attachedUserPolicy) await this.attachUserPolicy()
+    // if (!store.getState().attachedUserPolicy) await this.attachUserPolicy()
 
     return new Promise(async (resolve, reject) => {
       let host = 'a23c0yhadolyov-ats.iot.us-west-2.amazonaws.com'
@@ -211,6 +211,7 @@ export class IoTClient {
   }
 
   // takes over a specified thing
+  // unused
   attachThingPolicy(thingName) {
     return new Promise((resolve, reject) => {
       console.log('invoking iot_attach_thing_policy:')

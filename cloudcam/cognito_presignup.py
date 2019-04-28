@@ -1,10 +1,15 @@
 import boto3
 import logging
+import os
 
 log = logging.getLogger("cloudcam")
 log.setLevel(logging.DEBUG)
 
 iot = boto3.client("iot")
+
+user_iot_policy_name = os.getenv('USER_IOT_POLICY_NAME')
+if not user_iot_policy_name:
+    raise Exception("Missing USER_IOT_POLICY_NAME")
 
 
 def handler(event, context):
@@ -15,5 +20,12 @@ def handler(event, context):
         'autoConfirmUser': True,
         'autoVerifyEmail': True  # don't ask user for email confirmation code
     }
+
+    # attach our cognito user IoT policy
+    # the proper form here is region:userId
+    identity = f"{event['region']}:{event['userName']}"
+    print(f"identity: {identity}")
+    iot.attach_policy(policyName=user_iot_policy_name, target=identity)
+    print("Attached IoT policy")
 
     return event
