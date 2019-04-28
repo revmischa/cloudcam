@@ -1,46 +1,52 @@
-import React from 'react'
-import {connect} from 'react-redux'
+import React from "react";
+import { connect } from "react-redux";
 // import { error, success } from '../api/notification'
-import FormProvision from '../components/FormProvision'
-import store from '../store'
-import {IoTClient} from '../api/iot'
-import JSONPretty from 'react-json-pretty';
-import CodeBlock from 'react-copy-code';
+import FormProvision from "../components/FormProvision";
+import store from "../store";
+import { IoTClient } from "../api/iot";
 
 class Provision extends React.Component {
   constructor(props) {
     super(props);
-    this.client = new IoTClient()
+    this.client = new IoTClient();
     this.state = {
       thingConfig: null
-    }
+    };
   }
 
-  onSubmit = (form) => {
-    return this.client.provisionThing(form.thingName)
+  onSubmit = form => {
+    return this.client
+      .provisionThing(form.thingName)
       .then(data => {
-        console.log('Device config:');
+        console.log("Device config:");
         console.log(data.thingConfig);
         store.dispatch({
-          type: 'iot/provision', thingConfig: data.thingConfig
+          type: "iot/provision",
+          thingConfig: data.thingConfig
         });
         // success('Provisioned a thing.');
       })
       .catch(e => {
         // error(e && e.message ? e.message : 'Could not provision a thing.')
-      })
-  }
+      });
+  };
 
-  render () {
-    const {thingConfig} = this.props
+  render() {
+    const { thingConfig } = this.props;
     return (
-      <div className='section form is-large'>
-        <h2 className='title'>Provision</h2>
-        <div className='columns'>
-          <div className='column is-medium'>
-            <div className='notification'>
+      <div className="section form is-large">
+        <h2 className="title">Provision</h2>
+        <div className="columns">
+          <div className="column is-medium">
+            <div className="notification">
               {!thingConfig && <p>Provision a thing here.</p>}
-              {thingConfig && <p>Device configuration:<br/>{JSON.stringify(thingConfig, null, 2)}</p>}
+              {thingConfig && (
+                <p>
+                  Device configuration:
+                  <br />
+                  {JSON.stringify(thingConfig, null, 2)}
+                </p>
+              )}
               {/* <JSONPretty id="json-pretty" data={JSON.stringify(thingConfig, null, 2)}></JSONPretty>  */}
               {/* <CodeBlock JSON>
                 <pre>
@@ -51,24 +57,24 @@ class Provision extends React.Component {
               </CodeBlock>              */}
             </div>
           </div>
-          <div className='column'>
+          <div className="column">
             <FormProvision onSubmit={this.onSubmit} />
           </div>
         </div>
       </div>
-    )
+    );
   }
 }
 
-const mapStateToProps = function (store) {
+const mapStateToProps = function(store) {
   return {
     thingConfig: store.iot.thingConfig
-  }
+  };
 };
 
 Provision.route = {
-  path: 'provision',
+  path: "provision",
   component: Provision
-}
+};
 
-export default connect(mapStateToProps)(Provision)
+export default connect(mapStateToProps)(Provision);
