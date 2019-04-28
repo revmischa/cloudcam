@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "serverless-python-requirements": "^4.2.5"
+  },
+  "devDependencies": {
+    "serverless-iam-roles-per-function": "^1.0.4",
+    "serverless-pseudo-parameters": "^2.4.0",
+    "serverless-stack-output": "^0.2.3"
+  },
+  "name": "cloudcam"
+}

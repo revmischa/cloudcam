@@ -1,14 +1,14 @@
 # binary
-/cloudcam
 /vendor/.built_*
 /vendor/.extracted_libcurl
 /vendor/curl-*
 /vendor/mbedtls_lib
 /vendor/.cloned_iot_client
-/vendor/.extracted_mbedtls 
+/vendor/.extracted_mbedtls
 /vendor/aws_iot_client
-/vendor/libaws-iot.a        
+/vendor/libaws-iot.a
 
+__pycache__
 
 # axis files
 .eap-install.cfg
@@ -59,3 +59,11 @@ certs/verificationCert.*
 
 # Debug files
 *.dSYM/
+
+# serverless
+/.serverless
+node_modules
+
+/bin/*
+vendor/.extracted*
+vendor/jansson*

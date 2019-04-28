@@ -1,16 +1,14 @@
 ---
-AWSTemplateFormatVersion: 2010-09-09
-Transform: AWS::Serverless-2016-10-31
 Resources:
   ThumbBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub '${AWS::StackName}-thumbs'
+      BucketName: !Sub '#{AWS::StackName}-thumbs'
   ThumbStoreRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -20,9 +18,9 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-ThumbStoreRole'
+        - PolicyName: !Sub '#{AWS::StackName}-ThumbStoreRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -34,7 +32,7 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                 Effect: Allow
-                Resource: !Sub 'arn:aws:s3:::${ThumbBucket}/*'
+                Resource: !Sub 'arn:aws:s3:::#{ThumbBucket}/*'
               - Effect: Allow
                 Action:
                   - iot:Publish
@@ -42,35 +40,12 @@ Resources:
                   - iot:UpdateThingShadow
                 Resource:
                   - '*'
-  ThumbStoreLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt [ThumbStoreRole, Arn]
-      Runtime: python3.6
-      Handler: iot_request_thumb.handler
-      Timeout: 10
-      FunctionName: iot_request_thumb
-      Environment:
-        Variables:
-          S3_THUMB_BUCKET_NAME: !Sub '${AWS::StackName}-thumbs'
-      CodeUri: ../lambda
-      Events:
-        ThumbStoreEvent:
-          Type: IoTRule
-          Properties:
-            AwsIotSqlVersion: 2016-03-23
-            Sql: "SELECT * FROM 'cloudcam/thumb/request/*'"
-        ThumbStoreConnectedEvent:
-          Type: IoTRule
-          Properties:
-            AwsIotSqlVersion: 2016-03-23
-            Sql: "SELECT * FROM '$aws/events/presence/connected/#'"
 
   CognitoWebRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -81,9 +56,9 @@ Resources:
               StringEquals:
                 'cognito-identity.amazonaws.com:aud': !Ref CognitoIdentityPool
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-CognitoWebRole'
+        - PolicyName: !Sub '#{AWS::StackName}-CognitoWebRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -96,12 +71,13 @@ Resources:
                 Action:
                   - lambda:InvokeFunction
                 Resource:
-                  - !GetAtt [IotAttachThingPolicyLambda, Arn]
-                  - !GetAtt [IotProvisionThingLambda, Arn]
-                  - !GetAtt [IotListThingsLambda, Arn]
-                  - !GetAtt [JanusStartStreamLambda, Arn]
-                  - !GetAtt [JanusStopStreamLambda, Arn]
-                  - !GetAtt [ThumbStoreLambda, Arn]
+                  - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:#{AWS::StackName}*"
+                  # - !GetAtt IoTListThingsLambdaFunction.Arn
+                  # - !GetAtt IoTProvisionThingLambdaFunction.Arn
+                  # - !GetAtt IoTAttachThingPolicyLambdaFunction.Arn
+                  # - !GetAtt JanusStartStreamLambdaFunction.Arn
+                  # - !GetAtt JanusStopStreamLambdaFunction.Arn
+                  # - !GetAtt ThumbStoreLambdaFunction.Arn
   CognitoIdentityPool:
     Type: AWS::Cognito::IdentityPool
     Properties:
@@ -110,7 +86,7 @@ Resources:
         - ClientId: !Ref CognitoClient
           ProviderName: !GetAtt [CognitoUserPool, ProviderName]
       CognitoEvents:
-        SyncTrigger: !GetAtt [CognitoPresignupLambda, Arn]
+        SyncTrigger: !GetAtt [CognitoPresignupLambdaFunction, Arn]
   CognitoIdentityPoolRoleAttachment:
     Type: AWS::Cognito::IdentityPoolRoleAttachment
     Properties:
@@ -121,7 +97,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -131,9 +107,9 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-CognitoPresignupLambdaRole'
+        - PolicyName: !Sub '#{AWS::StackName}-CognitoPresignupLambdaRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -151,37 +127,110 @@ Resources:
                   - execute-api:Invoke
                 Resource: '*'
 
-  CognitoPresignupLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt [CognitoPresignupLambdaRole, Arn]
-      Runtime: python3.6
-      Handler: cognito_presignup.handler
-      CodeUri: ../lambda
   CognitoPresignupLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !GetAtt [CognitoPresignupLambda, Arn]
+      FunctionName: !GetAtt [CognitoPresignupLambdaFunction, Arn]
       Action: lambda:InvokeFunction
       Principal: cognito-idp.amazonaws.com
       SourceArn: !GetAtt [CognitoUserPool, Arn]
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
     Properties:
-      UserPoolName: !Sub '${AWS::StackName}UserPool'
+      UserPoolName: !Sub '#{AWS::StackName}UserPool'
       LambdaConfig:
-        PreSignUp: !GetAtt [CognitoPresignupLambda, Arn]
+        PreSignUp: !GetAtt [CognitoPresignupLambdaFunction, Arn]
       Policies:
         PasswordPolicy:
-          MinimumLength: 8
+          MinimumLength: 6
           RequireLowercase: false
           RequireNumbers: false
           RequireSymbols: false
           RequireUppercase: false
+      # AutoVerifiedAttributes:
+        # - email
+      UsernameAttributes:
+        - email
+      MfaConfiguration: OFF
+      DeviceConfiguration:
+        ChallengeRequiredOnNewDevice: false
+        DeviceOnlyRememberedOnUserPrompt: false
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: given_name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: family_name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: middle_name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: nickname
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: picture
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: website
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email_verified
+          AttributeDataType: Boolean
+          Mutable: true
+          Required: false
+        - Name: gender
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: birthdate
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: zoneinfo
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: locale
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: phone_number
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: phone_verified
+          AttributeDataType: Boolean
+          Mutable: true
+          Required: false
+        - Name: address
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: updated_at
+          AttributeDataType: Number
+          Mutable: true
+          Required: false
+          NumberAttributeConstraints:
+            MinValue: '0'
   CognitoClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      ClientName: !Sub '${AWS::StackName}UserPoolClient'
+      ClientName: !Sub '#{AWS::StackName}UserPoolClient'
       GenerateSecret: false
       UserPoolId: !Ref CognitoUserPool
 
@@ -189,7 +238,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -199,9 +248,9 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-IotAttachThingPolicyLambdaRole'
+        - PolicyName: !Sub '#{AWS::StackName}-IotAttachThingPolicyLambdaRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -223,20 +272,12 @@ Resources:
                 Action:
                   - execute-api:Invoke
                 Resource: '*'
-  IotAttachThingPolicyLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt [IotAttachThingPolicyLambdaRole, Arn]
-      FunctionName: iot_attach_thing_policy
-      Runtime: python3.6
-      Handler: iot_attach_thing_policy.handler
-      CodeUri: ../lambda
 
   IotProvisionThingLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -246,9 +287,9 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-IotProvisionThingLambdaRole'
+        - PolicyName: !Sub '#{AWS::StackName}-IotProvisionThingLambdaRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -265,27 +306,19 @@ Resources:
                   - iot:DetachPrincipalPolicy
                   - iot:CreateThing
                   - iot:CreateKeysAndCertificate
+                  - iot:AttachThingPrincipal
                   - sts:AssumeRole
                 Resource: '*'
               - Effect: Allow
                 Action:
                   - execute-api:Invoke
                 Resource: '*'
-  IotProvisionThingLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt [IotProvisionThingLambdaRole, Arn]
-      FunctionName: iot_provision_thing
-      Runtime: python3.6
-      Timeout: 10
-      Handler: iot_provision_thing.handler
-      CodeUri: ../lambda
 
   IotListThingsLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -295,9 +328,9 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-IotListThingsLambdaRole'
+        - PolicyName: !Sub '#{AWS::StackName}-IotListThingsLambdaRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -315,14 +348,6 @@ Resources:
                 Action:
                   - execute-api:Invoke
                 Resource: '*'
-  IotListThingsLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt [IotListThingsLambdaRole, Arn]
-      FunctionName: iot_list_things
-      Runtime: python3.6
-      Handler: iot_list_things.handler
-      CodeUri: ../lambda
 
   UiBucket:
     Type: AWS::S3::Bucket
@@ -330,13 +355,13 @@ Resources:
       AccessControl: PublicRead
       WebsiteConfiguration:
         IndexDocument: index.html
-      BucketName: !Ref UiBucketName
+      BucketName: ${self:custom.cloudcam.ui_bucket_name}
 
   JanusStartStreamLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -346,9 +371,9 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-JanusStartStreamLambdaRole'
+        - PolicyName: !Sub '#{AWS::StackName}-JanusStartStreamLambdaRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -370,25 +395,12 @@ Resources:
                 Action:
                   - execute-api:Invoke
                 Resource: '*'
-  JanusStartStreamLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt [JanusStartStreamLambdaRole, Arn]
-      FunctionName: janus_start_stream
-      Runtime: python3.6
-      Handler: janus_start_stream.handler
-      Timeout: 10
-      CodeUri: ../lambda
-      Environment:
-        Variables:
-          JANUS_HOSTED_ZONE_DOMAIN: !Ref JanusHostedZoneDomain
-          JANUS_INSTANCE_NAME_PREFIX: !Ref JanusInstanceNamePrefix
 
   JanusStopStreamLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -398,9 +410,9 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-JanusStopStreamLambdaRole'
+        - PolicyName: !Sub '#{AWS::StackName}-JanusStopStreamLambdaRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -420,21 +432,12 @@ Resources:
                 Action:
                   - execute-api:Invoke
                 Resource: '*'
-  JanusStopStreamLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt [JanusStopStreamLambdaRole, Arn]
-      FunctionName: janus_stop_stream
-      Runtime: python3.6
-      Handler: janus_stop_stream.handler
-      Timeout: 10
-      CodeUri: ../lambda
 
   JanusScaleLightsailLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -444,9 +447,9 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: !Sub '${AWS::StackName}-JanusScaleLightsailLambdaRole'
+        - PolicyName: !Sub '#{AWS::StackName}-JanusScaleLightsailLambdaRole'
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -476,24 +479,6 @@ Resources:
                 Action:
                   - execute-api:Invoke
                 Resource: '*'
-  JanusScaleLightsailLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt [JanusScaleLightsailLambdaRole, Arn]
-      FunctionName: janus_scale_lightsail
-      Runtime: python3.6
-      Handler: janus_scale_lightsail.handler
-      Timeout: 300
-      CodeUri: ../lambda
-      Environment:
-        Variables:
-          LIGHTSAIL_AZS: !Ref LightsailAzs
-          LIGHTSAIL_BLUEPRINT_ID: !Ref LightsailBlueprintId
-          LIGHTSAIL_BUNDLE_ID: !Ref LightsailBundleId
-          LIGHTSAIL_JANUS_IMAGE: !Ref LightsailJanusImage
-          JANUS_HOSTED_ZONE_ID: !Ref JanusHostedZoneId
-          JANUS_HOSTED_ZONE_DOMAIN: !Ref JanusHostedZoneDomain
-          JANUS_INSTANCE_NAME_PREFIX: !Ref JanusInstanceNamePrefix
 
   JanusKmsKey:
     Type: AWS::KMS::Key
@@ -501,21 +486,21 @@ Resources:
       Enabled: true
       EnableKeyRotation: false
       KeyPolicy:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Id: janus-kms
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+              AWS: !Sub 'arn:aws:iam::#{AWS::AccountId}:root'
             Action:
               - 'kms:*'
             Resource: '*'
-          - Effect: Allow
-            Principal:
-              AWS: !Sub '${JanusKmsKeyUserArn}'
-            Action:
-              - kms:Encrypt
-            Resource: '*'
+          # - Effect: Allow
+          #   Principal:
+          #     AWS: !Sub '#{JanusKmsKeyUserArn}'
+          #   Action:
+          #     - kms:Encrypt
+          #   Resource: '*'
           - Effect: Allow
             Principal:
               Service:
@@ -530,9 +515,6 @@ Resources:
       TargetKeyId: !Ref JanusKmsKey
 
 Parameters:
-  UiBucketName:
-    Type: String
-    Description: 'S3 UI bucket name. Must be the same as the UI domain name for CNAME redirect to work'
   LightsailAzs:
     Type: String
     Description: 'Lightsail Janus gateway instance availability zone'
@@ -549,24 +531,14 @@ Parameters:
     Type: String
     Description: 'Lightsail Janus gateway Docker image name'
     Default: 'somebodyelse/docker-janus:latest'
-  JanusHostedZoneId:
-    Type: String
-    Description: 'AWS Hosted Zone Id where Janus instances will receive DNS names'
-  JanusHostedZoneDomain:
-    Type: String
-    Description: 'AWS Hosted Zone domain where Janus instances will receive DNS names'
-  JanusInstanceNamePrefix:
-    Type: String
-    Description: 'Janus instance/dns name prefix'
-    Default: ls-janus
-  JanusKmsKeyUserArn:
-    Type: String
-    Description: 'ARN of the user to grant rights to use Janus SSL KMS key for signing'
 
 Outputs:
   IdentityPoolId:
     Description: 'Id of the Cognito identity pool'
     Value: !Ref CognitoIdentityPool
+  UserPoolId:
+    Description: 'Cognito user pool id'
+    Value: !Ref CognitoUserPool
   UserPoolName:
     Description: 'Name of the Cognito user pool'
     Value: !GetAtt [CognitoUserPool, ProviderName]
@@ -576,3 +548,7 @@ Outputs:
   UiUrl:
     Description: 'URL of the UI'
     Value: !GetAtt [UiBucket, WebsiteURL]
+  Region:
+    Value: '#{AWS::Region}'
+  StackName:
+    Value: '#{AWS::StackName}'

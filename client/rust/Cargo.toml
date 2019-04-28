@@ -1,0 +1,29 @@
+[package]
+name = "cloudcam"
+version = "0.1.0"
+
+[dependencies]
+log = "0.3"
+rand = "0.3"
+byteorder = "0.4"
+rumqtt = "0.10"
+env_logger = "0.3"
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
+futures = "0.1"
+hyper = "0.11"
+hyper-tls = "0.1"
+native-tls = "0.1"
+tokio-io = "0.1"
+tokio-core = "0.1"
+tokio-proto = "0.1"
+tokio-service = "0.1"
+tokio-timer = "0.1"
+nom = "^3.2"
+bytes = "0.4"
+dns-lookup = "0.8"
+
+[profile.release]
+lto = true
+#panic = 'abort' # this creates 10-15% smaller release binaries (after stripping)
