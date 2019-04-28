@@ -10,6 +10,11 @@ const styles = ({ palette, spacing }: Theme) =>
       padding: spacing.unit,
       backgroundColor: palette.background.default,
       color: palette.primary.main
+    },
+    main: {
+      // width: '1100px',
+      marginLeft: '1rem',
+      marginRight: '1rem',      
     }
   });
 
@@ -24,7 +29,7 @@ class DefaultLayout extends React.Component<IDefaultLayoutProps, any> {
       <div className={classes.root}>
         <Header />
 
-        <main>
+        <main className={classes.main}>
           {children}
         </main>
       </div>

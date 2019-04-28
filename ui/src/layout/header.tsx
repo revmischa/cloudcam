@@ -64,13 +64,6 @@ class Header extends React.Component<IHeaderProps, any> {
       <div className={classes.root}>
         <AppBar position="static">
           <Toolbar>
-            <IconButton
-              className={classes.menuButton}
-              color="inherit"
-              aria-label="Menu"
-            >
-              <MenuIcon />
-            </IconButton>
             <Typography
               variant="title"
               noWrap
@@ -94,8 +87,6 @@ class Header extends React.Component<IHeaderProps, any> {
             >
               Cameras
             </Button>
-            {/* <Link to="/provision">Provision</Link> */}
-            {/* <Link to="/">Cameras</Link> */}
             </Typography>
             <div>
               <IconButton

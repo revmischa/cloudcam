@@ -1,6 +1,8 @@
 import React from 'react'
 import { Field, reduxForm } from 'redux-form'
-import BasicField from './BasicField'
+import TextField from '@material-ui/core/TextField';
+import Button from '@material-ui/core/Button';
+
 
 const validate = values => {
   const errors = {} as any
@@ -11,13 +13,37 @@ const validate = values => {
   return errors
 }
 
+const renderTextField = ({
+  input,
+  label,
+  meta: { touched, error },
+  ...custom
+}) => (
+  <TextField
+    variant="outlined"
+    margin="normal"
+    hintText={label}
+    label={label}
+    name={name}
+    errorText={touched && error}
+    {...input}
+    {...custom}
+  />
+)
+
 const FormProvision = (props) => {
   const { handleSubmit, invalid, pristine, submitting } = props
   return (
     <form onSubmit={handleSubmit}>
-      <Field name='thingName' type='text' component={BasicField} label='thing name'/>
+      <Field name='thingName' type='text' component={renderTextField} label='thing name'/>
       <div className='control'>
-        <button className={'button is-primary is-large' + (submitting ? ' is-loading' : '')} type='submit' disabled={invalid || pristine || submitting}>provision</button>
+        <Button 
+          className={'button is-primary is-large' + (submitting ? ' is-loading' : '')} 
+          type='submit' 
+          disabled={invalid || pristine || submitting}
+          variant="contained" 
+          color="primary" 
+        >provision</Button>
       </div>
     </form>
   )

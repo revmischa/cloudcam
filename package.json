@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "react-json-pretty": "^2.0.0",
     "serverless-python-requirements": "^4.2.5"
   },
   "devDependencies": {
