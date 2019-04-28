@@ -10,7 +10,7 @@ import Grid from '@material-ui/core/Grid';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
-
+import { Link } from "react-router-dom";
 
 interface ICamera {
   name: string
@@ -33,9 +33,14 @@ class CameraList extends React.Component<ICameraListProps, any> {
     this.client.refreshThings()
   }
 
+
+
   render() {
     const client = this.client
     const {things} = this.props;
+      // This resolves to nothing and doesn't affect browser history
+    const dudUrl = 'javascript:;';
+    // const CameraLink = props => <Link to="/live-view" {...props} />
     return (
       <div>
         <section className='section content container'>
@@ -89,6 +94,7 @@ class CameraList extends React.Component<ICameraListProps, any> {
                         }
                       }} >{thing.isStreaming ? 'stop' : 'view live'}
                     </Button>
+                    <Link to={`/cameras/${thing.name}/live`} >{thing.name}</Link>
                   </CardActions>
                 </Card>
               </Grid>

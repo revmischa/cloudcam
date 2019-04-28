@@ -9,6 +9,7 @@ import store from './store'
 import DefaultLayout from './layout'
 import {MuiThemeProvider} from '@material-ui/core/styles';
 import theme from './theme'
+import liveView from './pages/liveView';
 
 const signUpConfig = {
   signUpFields: [
@@ -39,6 +40,7 @@ class App extends Component {
             <DefaultLayout>           
               <Route exact path="/" component={CameraList} />
               <Route exact path="/provision" component={Provision} />
+              <Route exact path="/cameras/:thingName/live" component={liveView} />
             </DefaultLayout>
           </Router>
         </Provider>
