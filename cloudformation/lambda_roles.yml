@@ -18,12 +18,6 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: 'arn:aws:logs:*:*:*'
               - Action:
                   - s3:GetObject
                   - s3:PutObject
@@ -57,18 +51,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: 'arn:aws:logs:*:*:*'
-              - Effect: Allow
-                Action:
                   - iot:DescribeEndpoint
-                  - sts:AssumeRole
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - execute-api:Invoke
                 Resource: '*'
 
   IoTAttachUserPolicyLambdaRole:
@@ -91,14 +74,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: 'arn:aws:logs:*:*:*'
-              - Effect: Allow
-                Action:
                   - iot:AttachPolicy
-                  - sts:AssumeRole
                 Resource: '*'
 
   IoTAttachCameraPolicyLambdaRole:
@@ -121,20 +97,9 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: 'arn:aws:logs:*:*:*'
-              - Effect: Allow
-                Action:
                   - iot:DescribeEndpoint
                   - iot:AttachPolicy
                   - iot:UpdateThing
-                  - sts:AssumeRole
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - execute-api:Invoke
                 Resource: '*'
 
   IoTProvisionThingLambdaRole:
@@ -157,12 +122,6 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: 'arn:aws:logs:*:*:*'
-              - Effect: Allow
-                Action:
                   - iot:DescribeEndpoint
                   - iot:CreatePolicy
                   - iot:DeletePolicy
@@ -171,11 +130,6 @@ Resources:
                   - iot:CreateThing
                   - iot:CreateKeysAndCertificate
                   - iot:AttachThingPrincipal
-                  - sts:AssumeRole
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - execute-api:Invoke
                 Resource: '*'
 
   IotListThingsLambdaRole:
@@ -198,20 +152,10 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: 'arn:aws:logs:*:*:*'
-              - Effect: Allow
-                Action:
                   - iot:ListPrincipalPolicies
                   - iot:DescribeThing
-                  - sts:AssumeRole
                 Resource: '*'
-              - Effect: Allow
-                Action:
-                  - execute-api:Invoke
-                Resource: '*'
+
 Outputs:
   IdentityPoolId:
     Description: 'Id of the Cognito identity pool'

@@ -216,7 +216,7 @@ export class IoTClient {
       console.log('invoking iot_attach_thing_policy:')
       this.ccAws.invokeLambda(
         {
-          FunctionName: CCStack.IoTAttachThingPolicyLambdaFunctionQualifiedArn,
+          FunctionName: CCStack.IoTAttachCameraPolicyLambdaFunctionQualifiedArn,
           Payload: JSON.stringify({
             thingName: thingName,
           }),
@@ -236,29 +236,18 @@ export class IoTClient {
   }
 
   // provisions a new thing
-  provisionThing(thingName) {
-    return new Promise((resolve, reject) => {
-      console.log('invoking iot_provision_thing:')
-      this.ccAws.invokeLambda(
-        {
-          FunctionName: CCStack.IoTProvisionThingLambdaFunctionQualifiedArn,
-          Payload: JSON.stringify({
-            thingName: thingName,
-          }),
-        },
-        (err, data) => {
-          console.log('iot_provision_thing result:')
-          if (err) {
-            console.log(err)
-            reject(err)
-          } else {
-            console.log(data)
-            this.refreshThings()
-            resolve(JSON.parse(data.Payload as string))
-          }
-        }
-      )
+  public async provisionThing(thingName) {
+    console.log('invoking iot_provision_thing:')
+    const data = await this.ccAws.invokeLambda({
+      FunctionName: CCStack.IoTProvisionThingLambdaFunctionQualifiedArn,
+      Payload: JSON.stringify({
+        thingName: thingName,
+      }),
     })
+
+    console.log('iot_provision_thing result:', data)
+    this.refreshThings()
+    return JSON.parse(data.Payload as string)
   }
 
   public async attachUserPolicy() {
@@ -286,6 +275,8 @@ export class IoTClient {
     this.requestThumbsProcess()
 
     var subscribeFn = () => {
+      if (!result.thingNames) return
+
       result.thingNames.map(async name => {
         await this.subscribeToShadowUpdates(name)
         await this.subscribeToShadowGet(name)

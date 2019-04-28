@@ -88,7 +88,7 @@ functions:
     role: !GetAtt [IoTAttachUserPolicyLambdaRole, Arn]
     handler: cloudcam/iot_attach_user_policy.handler
     environment:
-       User_IOT_POLICY_NAME: !Ref UserIoTPolicy
+       USER_IOT_POLICY_NAME: !Ref UserIoTPolicy
 
   ThumbStore:
     role: !GetAtt [ThumbStoreRole, Arn]

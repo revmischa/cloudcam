@@ -259,10 +259,10 @@ serverless-pseudo-parameters@^2.4.0:
   resolved "https://registry.yarnpkg.com/serverless-pseudo-parameters/-/serverless-pseudo-parameters-2.4.0.tgz#bf5ebe6948f60bbf69c7dc2cf4bd2a5ee7dc6761"
   integrity sha512-lb9R62PUFdEAbbYH7pe1wzR7vtIpa8YI8OVcQ5LlLyE0+AxWG4bwEw33X5LE8+5oLwTy57Y/EevnxKnMeyiXxw==
 
-serverless-python-requirements@^4.2.5:
-  version "4.2.5"
-  resolved "https://registry.yarnpkg.com/serverless-python-requirements/-/serverless-python-requirements-4.2.5.tgz#1cb60847725c7bbcd92ffeb50391248faab3e03c"
-  integrity sha512-dmdgrSLWgJv2g/LIfFdBIkJFn2duNFRZc7De94AHf2ylZS7s+gKJ8Ga090YdaigWLhH65tMA50Ub06SUk0p6EQ==
+serverless-python-requirements@^4.3.0:
+  version "4.3.0"
+  resolved "https://registry.yarnpkg.com/serverless-python-requirements/-/serverless-python-requirements-4.3.0.tgz#ba2b78e01213428ecd62a6368af82beec4de17d1"
+  integrity sha512-VyXdEKNxUWoQDbssWZeR5YMaTDf1U4CO3yJH2953Y2Rt8zD6hG+vpTkVR490/Ws1PQsBopWuFfgDcLyvAppaRg==
   dependencies:
     appdirectory "^0.1.0"
     bluebird "^3.0.6"
