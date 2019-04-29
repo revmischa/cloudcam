@@ -22,10 +22,14 @@ def handler(event, context):
     }
 
     # attach our cognito user IoT policy
+
+    # here userID is _WRONG_
+
+
     # the proper form here is region:userId
     identity = f"{event['region']}:{event['userName']}"
     print(f"identity: {identity}")
-    iot.attach_policy(policyName=user_iot_policy_name, target=identity)
-    print("Attached IoT policy")
+    # iot.attach_policy(policyName=user_iot_policy_name, target=identity)
+    # print("Attached IoT policy")
 
     return event

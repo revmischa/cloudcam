@@ -30,9 +30,14 @@ class CCAWS {
 
     return new Promise((resolve, reject) => {
       client.invoke(params, (err, data) => {
+        // error handling
+        if (err) return reject(err)
+        if (data && data.FunctionError) return reject(data)
+        const anyData = data as any
+        if (anyData && anyData.errorMessage) return reject(anyData.errorMessage)
+
         if (callback) callback(err, data)
 
-        if (err) return reject(err)
         return resolve(data)
       })
     })

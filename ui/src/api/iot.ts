@@ -34,10 +34,10 @@ export class IoTClient {
   public async mqttConnect(): Promise<void> {
     // we must have our IoT policy attached to our cognito user before doing
     // any IoT shenanigans
-    // if (!store.getState().attachedUserPolicy) await this.attachUserPolicy()
+    if (!store.getState().attachedUserPolicy) await this.attachUserPolicy()
 
     return new Promise(async (resolve, reject) => {
-      let host = 'a23c0yhadolyov-ats.iot.us-west-2.amazonaws.com'
+      let host = 'a23c0yhadolyov-ats.iot.eu-central-1.amazonaws.com'
       const credentials = await Auth.currentCredentials()
       let requestUrl = SigV4Utils.getSignedUrl(host, CCStack.Region, credentials)
 
@@ -46,7 +46,7 @@ export class IoTClient {
         'wss-client-' +
         Math.random()
           .toString(36)
-          .substring(7)
+          .substring(10)
       this.mqttClient = new MQTT.Client(requestUrl, clientId)
       this.mqttClient.onConnectionLost = responseObject => {
         if (responseObject.errorCode !== 0) {
@@ -101,7 +101,7 @@ export class IoTClient {
     }
 
     let mqttMessage = new MQTT.Message(JSON.stringify(msg))
-    mqttMessage.destinationName = 'cloudcam/webrtc/setup/' + thingName
+    mqttMessage.destinationName = `cloudcam/${thingName}/webrtc/setup`
     this.mqttClient.send(mqttMessage)
     console.log('sent MQTT setup message: ', mqttMessage)
   }

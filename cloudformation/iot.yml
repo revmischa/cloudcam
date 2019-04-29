@@ -4,7 +4,7 @@ Resources:
   UserIoTPolicy:
     Type: AWS::IoT::Policy
     Properties:
-      # PolicyName: ${self:custom.cloudcam.userIoTPolicyName}
+      # PolicyName: "#{AWS::StackName}-user-IoT-policy"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -68,11 +68,16 @@ Resources:
                 -
                   - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
                   - 'topicfilter/$aws/things/${iot:Connection.Thing.ThingName}/shadow/update'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/cloudcam/${iot:Connection.Thing.ThingName}/webrtc/setup'
 
   CameraIoTPolicy:
     Type: AWS::IoT::Policy
     Properties:
-      # PolicyName: ${self:custom.cloudcam.cameraIoTPolicyName}
+      # PolicyName: "#{AWS::StackName}-camera-IoT-policy"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:

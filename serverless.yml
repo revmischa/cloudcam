@@ -5,8 +5,6 @@ plugins:
   - serverless-pseudo-parameters
   - serverless-stack-output
   - serverless-iam-roles-per-function
-  # - serverless-domain-manager
-
 custom:
   cloudcam:
     s3_thumb_bucket_name: '#{AWS::StackName}-thumbs'
@@ -15,8 +13,6 @@ custom:
       hosted_zone_id: Z28O6A5M6DDPL6
       instance_name_prefix: '#{AWS::StackName}-stream'
     ui_bucket_name: '#{AWS::StackName}-ui'
-    userIoTPolicyName: "#{AWS::StackName}-user-IoT-policy"
-    cameraIoTPolicyName: "#{AWS::StackName}-camera-IoT-policy"
     defaultLambdaMemorySize: 256
   output:
     file: ui/src/aws-stack.json
@@ -41,7 +37,7 @@ provider:
   runtime: python3.6
   stage: ${opt:stage, 'dev'}
   # profile: default
-  region: us-west-2
+  region: eu-central-1
   variableSyntax: "\\${((?!(iot)|(AWS))[ ~:a-zA-Z0-9._@'\",\\-\\/\\(\\)]+?)}"
 
   iamRoleStatements:
@@ -67,7 +63,7 @@ functions:
     handler: cloudcam.iot_list_things.handler
     events:
       - http: GET /list_things
-    role: !GetAtt [IotListThingsLambdaRole, Arn]
+    role: !GetAtt [IoTListThingsLambdaRole, Arn]
 
   IoTProvisionThing:
     handler: cloudcam/iot_provision_thing.handler

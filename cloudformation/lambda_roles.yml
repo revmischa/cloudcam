@@ -129,7 +129,7 @@ Resources:
                   - iot:AttachThingPrincipal
                 Resource: '*'
 
-  IotListThingsLambdaRole:
+  IoTListThingsLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -149,8 +149,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - iot:ListPrincipalPolicies
-                  - iot:DescribeThing
+                  - iot:ListPrincipalThings
                 Resource: '*'
 
 Outputs:
