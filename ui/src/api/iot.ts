@@ -15,7 +15,6 @@ export class IoTClient {
   private mqttClient: MQTT.Client | undefined
   private ccAws = ccAWS
   private sdpHandler?: SDPHandler
-  private isConnecting: boolean = false
 
   public static get shared(): IoTClient {
     if (!sharedClient) sharedClient = new IoTClient()
@@ -33,13 +32,8 @@ export class IoTClient {
   }
 
   public async mqttConnect(): Promise<void> {
-    if (this.isConnecting) return
-
-    // we must have our IoT policy attached to our cognito user before doing
-    // any IoT shenanigans
-    // if (!store.getState().attachedUserPolicy) await this.attachUserPolicy()
-
     return new Promise(async (resolve, reject) => {
+      // todo: get endpoint address from a lambda function instead of hard-coding
       let host = 'a23c0yhadolyov-ats.iot.eu-central-1.amazonaws.com'
       const credentials = await Auth.currentCredentials()
       let requestUrl = SigV4Utils.getSignedUrl(host, CCStack.Region, credentials)
@@ -212,26 +206,11 @@ export class IoTClient {
   // takes over a specified thing
   // unused
   attachThingPolicy(thingName) {
-    return new Promise((resolve, reject) => {
-      console.log('invoking iot_attach_thing_policy:')
-      this.ccAws.invokeLambda(
-        {
-          FunctionName: CCStack.IoTAttachCameraPolicyLambdaFunctionQualifiedArn,
-          Payload: JSON.stringify({
-            thingName: thingName,
-          }),
-        },
-        (err, data) => {
-          console.log('iot_attach_thing_policy result:')
-          if (err) {
-            console.log(err)
-            reject(err)
-          } else {
-            console.log(data)
-            resolve(data)
-          }
-        }
-      )
+    return this.ccAws.invokeLambda({
+      FunctionName: CCStack.IoTAttachCameraPolicyLambdaFunctionQualifiedArn,
+      Payload: JSON.stringify({
+        thingName: thingName,
+      }),
     })
   }
 
@@ -293,26 +272,15 @@ export class IoTClient {
   }
 
   // requests new thumbnails from the specified things (upload notification will be received separately via MQTT thing shadow update)
-  requestThumbs(thingNames) {
+  public async requestThumbs(thingNames: string[]): Promise<any> {
     if (!thingNames || !thingNames.length) return
 
-    return new Promise((resolve, reject) => {
-      console.log('invoking request_thumb: ' + thingNames)
-      let params = {
-        FunctionName: CCStack.ThumbStoreLambdaFunctionQualifiedArn,
-        Payload: JSON.stringify({
-          thingNames: thingNames,
-        }),
-      }
-      this.ccAws.invokeLambda(params, function(err, data) {
-        if (err) {
-          console.log(err)
-          reject(err)
-        } else {
-          console.log(data)
-          resolve(data)
-        }
-      })
+    console.log('invoking request_thumb: ' + thingNames)
+    return this.ccAws.invokeLambda({
+      FunctionName: CCStack.ThumbStoreLambdaFunctionQualifiedArn,
+      Payload: JSON.stringify({
+        thingNames: thingNames,
+      }),
     })
   }
 

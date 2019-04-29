@@ -1,8 +1,7 @@
 import React, { Component } from 'react'
-import './App.css'
 import { withAuthenticator } from 'aws-amplify-react' // or 'aws-amplify-react-native';
 import { BrowserRouter as Router, Route } from 'react-router-dom'
-import Provision from './pages/Provision'
+import Provision from './pages/provision'
 import CameraList from './pages/cameraList'
 import { Provider } from 'react-redux'
 import store from './store'

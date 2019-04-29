@@ -14,7 +14,7 @@ language: python
 python:
   - '3.6'
 script:
-  - if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
+  # - if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
   - yamllint -c .yamllint $CF_TEMPLATE
   - docker run -v $TRAVIS_BUILD_DIR:/cloudcam $TOOLS_IMAGE /bin/bash -c "source ~/.cargo/env && cd /cloudcam/client/rust && cargo build"
   - docker run -v $TRAVIS_BUILD_DIR:/cloudcam $TOOLS_IMAGE /bin/bash -c "cd /cloudcam && CLOUDCAM_CLIENT=./client/rust/target/debug/cloudcam RUST_LOG=info pytest test"
@@ -33,7 +33,7 @@ deploy:
     secure: $AWS_SECRET_ACCESS_KEY
 after_success:
   - echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
-  - echo "Cloudformation template validated"
+  # - echo "Cloudformation template validated"
   - echo "YAML linted"
   - echo "Rust client built"
   - echo "Rust client tested"
