@@ -1,3 +1,4 @@
+---
 Resources:
   CognitoWebRole:
     Type: AWS::IAM::Role
