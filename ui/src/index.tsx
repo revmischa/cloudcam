@@ -6,6 +6,7 @@ import * as dotenv from 'dotenv'
 import AWS from 'aws-sdk'
 import * as CCStack from './aws-stack.json'
 import Amplify from 'aws-amplify'
+import './index.css'
 
 dotenv.config()
 
