@@ -53,9 +53,11 @@ script:
   - cd ~/cloudcam
   - CLOUDCAM_CLIENT=~/client/rust/target/debug/cloudcam RUST_LOG=info pytest test
   - echo "Rust client tested"
-  - cd ~/cloudcam/client/c && make all
+  - cd ~/cloudcam/client/c 
+  - make all
   - echo "C client built"
-  - cd ~/cloudcam && CLOUDCAM_CLIENT=~/client/c/cloudcam pytest test
+  - cd ~/cloudcam 
+  - CLOUDCAM_CLIENT=~/client/c/cloudcam pytest test
   - echo "C client tested"
 install:
   - pip3 install --upgrade paho-mqtt Pillow cherrypy
