@@ -1,6 +1,7 @@
 ---
 Resources:
   # IoT policy for cognito users
+  # (not used right now)
   UserIoTPolicy:
     Type: AWS::IoT::Policy
     Properties:
@@ -12,7 +13,7 @@ Resources:
           - Effect: Allow
             Action:
               - iot:Connect
-            Resource: "arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}:client/wss-client-*"
+            Resource: "arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}:client/wss-*"
           # read/update shadow for thing
           - Effect: Allow
             Action:
@@ -63,16 +64,17 @@ Resources:
               - iot:Receive
               - iot:Publish
             Resource:
+              # FIXME: these allow access to any camera- fix this
               - 'Fn::Join':
                 - ':'
                 -
                   - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
-                  - 'topicfilter/$aws/things/${iot:Connection.Thing.ThingName}/shadow/update'
+                  - 'topic/$aws/things/+/shadow/update'
               - 'Fn::Join':
                 - ':'
                 -
                   - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
-                  - 'topicfilter/cloudcam/${iot:Connection.Thing.ThingName}/webrtc/setup'
+                  - 'topic/cloudcam/*/webrtc/setup'
 
   CameraIoTPolicy:
     Type: AWS::IoT::Policy
@@ -100,20 +102,19 @@ Resources:
                 - ':'
                 -
                   - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
-                  - 'topicfilter/$aws/things/${iot:Connection.Thing.ThingName}/shadow/*'
+                  - 'topic/$aws/things/${iot:Connection.Thing.ThingName}/shadow/*'
               - 'Fn::Join':
                 - ':'
                 -
                   - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
-                  - 'topicfilter/cloudcam/${iot:Connection.Thing.ThingName}/commands'
+                  - 'topic/cloudcam/${iot:Connection.Thing.ThingName}/commands'
               - 'Fn::Join':
                 - ':'
                 -
                   - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
-                  - 'topicfilter/cloudcam/${iot:Connection.Thing.ThingName}/notifications'
+                  - 'topic/cloudcam/${iot:Connection.Thing.ThingName}/notifications'
           - Effect: Allow
             Action:
-              - iot:Receive
               - iot:Subscribe
             Resource:
               - 'Fn::Join':
