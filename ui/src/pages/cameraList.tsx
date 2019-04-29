@@ -46,11 +46,14 @@ class CameraList extends React.Component<ICameraListProps, any> {
                         {thing.name}
                       </Typography>
                       <Typography>Thing description to be added.</Typography>
-                      <div className="thumb-block">
+                      <div 
+                        className="thumb-block"
+                        style={{ maxWidth: '400px'}}
+                        >
                         <img
                           id={thing.name}
                           className="thumb"
-                          style={{ display: thing.isStreaming ? 'none' : 'block' }}
+                          style={{ display: thing.isStreaming ? 'none' : 'block', width: '100%' }}
                           src={thing.thumbUrl ? thing.thumbUrl : 'images/no-video.png'}
                           alt="Camera Thumbnail"
                         />
