@@ -1,38 +1,49 @@
-import React from "react";
-import { connect } from "react-redux";
+import * as React from 'react'
+import { connect } from 'react-redux'
 // import { error, success } from '../api/notification'
-import FormProvision from "../components/FormProvision";
-import store from "../store";
-import { IoTClient } from "../api/iot";
+import FormProvision from '../components/FormProvision'
+import store from '../store'
+import { IoTClient } from '../api/iot'
 
-class Provision extends React.Component {
+interface IProvisionProps {
+  thingConfig: object
+}
+
+class Provision extends React.Component<IProvisionProps> {
+  private client: IoTClient
+
+  public static route = {
+    path: 'provision',
+    component: Provision,
+  }
+
   constructor(props) {
-    super(props);
-    this.client = new IoTClient();
+    super(props)
+    this.client = new IoTClient()
     this.state = {
-      thingConfig: null
-    };
+      thingConfig: null,
+    }
   }
 
   onSubmit = form => {
     return this.client
       .provisionThing(form.thingName)
       .then(data => {
-        console.log("Device config:");
-        console.log(data.thingConfig);
+        console.log('Device config:')
+        console.log(data.thingConfig)
         store.dispatch({
-          type: "iot/provision",
-          thingConfig: data.thingConfig
-        });
+          type: 'iot/provision',
+          thingConfig: data.thingConfig,
+        })
         // success('Provisioned a thing.');
       })
       .catch(e => {
         // error(e && e.message ? e.message : 'Could not provision a thing.')
-      });
-  };
+      })
+  }
 
   render() {
-    const { thingConfig } = this.props;
+    const { thingConfig } = this.props
     return (
       <div className="section form is-large">
         <h2 className="title">Provision</h2>
@@ -62,19 +73,14 @@ class Provision extends React.Component {
           </div>
         </div>
       </div>
-    );
+    )
   }
 }
 
 const mapStateToProps = function(store) {
   return {
-    thingConfig: store.iot.thingConfig
-  };
-};
+    thingConfig: store.iot.thingConfig,
+  }
+}
 
-Provision.route = {
-  path: "provision",
-  component: Provision
-};
-
-export default connect(mapStateToProps)(Provision);
+export default connect(mapStateToProps)(Provision)

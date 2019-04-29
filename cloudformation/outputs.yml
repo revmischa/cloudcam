@@ -1,0 +1,21 @@
+---
+Outputs:
+  IdentityPoolId:
+    Description: 'Id of the Cognito identity pool'
+    Value: !Ref CognitoIdentityPool
+  UserPoolId:
+    Description: 'Cognito user pool id'
+    Value: !Ref CognitoUserPool
+  UserPoolName:
+    Description: 'Name of the Cognito user pool'
+    Value: !GetAtt [CognitoUserPool, ProviderName]
+  UserPoolClientName:
+    Description: 'Name of the Cognito user pool web client'
+    Value: !Ref CognitoClient
+  UiUrl:
+    Description: 'URL of the UI'
+    Value: !GetAtt [UiBucket, WebsiteURL]
+  Region:
+    Value: '#{AWS::Region}'
+  StackName:
+    Value: '#{AWS::StackName}'

@@ -1,0 +1,177 @@
+---
+Resources:
+  # contains unused Janus stuff
+  JanusStartStreamLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: !Sub '#{AWS::StackName}-JanusStartStreamLambdaRole'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - iot:Publish
+                  - iot:Connect
+                  - iot:GetThingShadow
+                  - iot:UpdateThingShadow
+                  - lightsail:GetInstance
+                  - lightsail:GetInstances
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource: '*'
+
+  JanusStopStreamLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: !Sub '#{AWS::StackName}-JanusStopStreamLambdaRole'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - iot:Publish
+                  - iot:Connect
+                  - iot:GetThingShadow
+                  - iot:UpdateThingShadow
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource: '*'
+
+  JanusScaleLightsailLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: !Sub '#{AWS::StackName}-JanusScaleLightsailLambdaRole'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - lightsail:GetInstance
+                  - lightsail:GetInstances
+                  - lightsail:CreateInstances
+                  - lightsail:DeleteInstance
+                  - lightsail:OpenInstancePublicPorts
+                  - route53:ChangeResourceRecordSets
+                  - route53:ListHealthChecks
+                  - route53:CreateHealthCheck
+                  - route53:DeleteHealthCheck
+                  - route53:ChangeTagsForResource
+                  - route53:TestDNSAnswer
+                  - cloudwatch:PutMetricAlarm
+                  - cloudwatch:DeleteAlarms
+                  - kms:Decrypt
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource: '*'
+
+  JanusKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Enabled: true
+      EnableKeyRotation: false
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: janus-kms
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::#{AWS::AccountId}:root'
+            Action:
+              - 'kms:*'
+            Resource: '*'
+          # - Effect: Allow
+          #   Principal:
+          #     AWS: !Sub '#{JanusKmsKeyUserArn}'
+          #   Action:
+          #     - kms:Encrypt
+          #   Resource: '*'
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - kms:Decrypt
+            Resource: '*'
+  JanusKmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: 'alias/janus'
+      TargetKeyId: !Ref JanusKmsKey
+
+Parameters:
+  LightsailAzs:
+    Type: String
+    Description: 'Lightsail Janus gateway instance availability zone'
+    Default: 'us-west-2a,us-west-2b,us-west-2c'
+  LightsailBlueprintId:
+    Type: String
+    Description: 'Lightsail Janus gateway instance blueprint (image) id'
+    Default: amazon_linux_2017_03_1_1
+  LightsailBundleId:
+    Type: String
+    Description: 'Lightsail Janus gateway instance bundle (type) id'
+    Default: nano_1_0
+  LightsailJanusImage:
+    Type: String
+    Description: 'Lightsail Janus gateway Docker image name'
+    Default: 'somebodyelse/docker-janus:latest'

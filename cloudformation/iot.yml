@@ -1,0 +1,134 @@
+---
+Resources:
+  # IoT policy for cognito users
+  # (not used right now)
+  UserIoTPolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      # PolicyName: "#{AWS::StackName}-user-IoT-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # connect from websocket client
+          - Effect: Allow
+            Action:
+              - iot:Connect
+            Resource: "arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}:client/wss-*"
+          # read/update shadow for thing
+          - Effect: Allow
+            Action:
+              - iot:GetThingShadow
+              - iot:UpdateThingShadow
+            Resource:
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'thing/${iot:Connection.Thing.ThingName}'
+          - Effect: Allow
+            Action:
+              - iot:Subscribe
+            Resource:
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/$aws/things/${iot:Connection.Thing.ThingName}/shadow/update'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/$aws/things/${iot:Connection.Thing.ThingName}/shadow/update/accepted'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/$aws/things/${iot:Connection.Thing.ThingName}/shadow/get'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/$aws/things/${iot:Connection.Thing.ThingName}/shadow/get/accepted'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/cloudcam/${iot:Connection.Thing.ThingName}/notifications'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/cloudcam/${iot:Connection.Thing.ThingName}/commands'
+          - Effect: Allow
+            Action:
+              - iot:Receive
+              - iot:Publish
+            Resource:
+              # FIXME: these allow access to any camera- fix this
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topic/$aws/things/+/shadow/update'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topic/cloudcam/*/webrtc/setup'
+
+  CameraIoTPolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      # PolicyName: "#{AWS::StackName}-camera-IoT-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # connect from websocket client
+          - Effect: Allow
+            Action:
+              - iot:Connect
+            Resource:
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'client/${iot:ClientId}'
+          - Effect: Allow
+            Action:
+              - iot:Receive
+              - iot:Publish
+            Resource:
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topic/$aws/things/${iot:Connection.Thing.ThingName}/shadow/*'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topic/cloudcam/${iot:Connection.Thing.ThingName}/commands'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topic/cloudcam/${iot:Connection.Thing.ThingName}/notifications'
+          - Effect: Allow
+            Action:
+              - iot:Subscribe
+            Resource:
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/$aws/things/${iot:Connection.Thing.ThingName}/shadow/*'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/cloudcam/${iot:Connection.Thing.ThingName}/commands'
+              - 'Fn::Join':
+                - ':'
+                -
+                  - 'arn:aws:iot:#{AWS::Region}:#{AWS::AccountId}'
+                  - 'topicfilter/cloudcam/${iot:Connection.Thing.ThingName}/notifications'
