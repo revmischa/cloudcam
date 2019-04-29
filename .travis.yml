@@ -9,6 +9,8 @@ dist: xenial
 
 addons:
   apt:
+    sources:
+      - ppa:ddalex/gstreamer
     packages:
       - build-essential
       - libssl-dev 
@@ -19,13 +21,13 @@ addons:
       - gstreamer1.0-plugins-bad-dbg 
       - gstreamer1.0-plugins-good-dbg 
       - gstreamer1.0-plugins-base-dbg
-      - gstreamer1.0-plugins-rtp 
+      # - gstreamer1.0-plugins-rtp 
       - gstreamer1.0-nice 
       - libgstreamer1.0-0-dbg 
-      - gstreamer1.0-python3-dbg-plugin-loader 
+      # - gstreamer1.0-python3-dbg-plugin-loader 
       - python3-gst-1.0 
       - gir1.2-gst-rtsp-server-1.0
-      - librust-openssl-dev 
+      # - librust-openssl-dev
       - rustc 
       - cargo
 
@@ -37,7 +39,7 @@ env:
 language: python
 python:
   - '3.6'
-  - '3.7'
+  # - '3.7'
 script:
   # - if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
   # - yamllint -c .yamllint cloudformation/*.yml
