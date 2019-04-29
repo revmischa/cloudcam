@@ -56,7 +56,7 @@ script:
   - cd $TRAVIS_BUILD_DIR/cloudcam/client/c 
   - make all
   - echo "C client built"
-  - cd $TRAVIS_BUILD_DIR/cloudcam 
+  - cd $TRAVIS_BUILD_DIR 
   - CLOUDCAM_CLIENT=$TRAVIS_BUILD_DIR/client/c/cloudcam pytest test
   - echo "C client tested"
 install:
