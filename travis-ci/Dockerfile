@@ -12,8 +12,9 @@ RUN apt install -y \
   gstreamer1.0-plugins-rtp gstreamer1.0-nice libgstreamer1.0-0-dbg gstreamer1.0-python3-dbg-plugin-loader \
   python3-gst-1.0 gir1.2-gst-rtsp-server-1.0 
 
+RUN apt install -y \
+  librust-openssl-dev rustc cargo
+
 RUN pip3 install --upgrade \
   awscli yamllint pytest paho-mqtt Pillow cherrypy
-
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
