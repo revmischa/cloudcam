@@ -1,44 +1,69 @@
 # note: we are using a $TOOLS_IMAGE docker image (based on Ubuntu 17.10) to build and test the Rust/C clients
 #       since Travis CI doesn't offer any Linux distribution newer than Ubuntu 14.04 which doesn't have recent enough
 #       Python GStreamer bindings and building them from scratch there is not sufficiently fantastic
-sudo: required
-services:
-  - docker
+# sudo: required
+# services:
+#   - docker
+
+dist: xenial
+
+addons:
+  apt:
+    packages:
+      - build-essential
+      - libssl-dev 
+      - libcurl4-openssl-dev 
+      - mosquitto
+      - libgstreamer1.0-dev
+      - gstreamer1.0-plugins-ugly-dbg 
+      - gstreamer1.0-plugins-bad-dbg 
+      - gstreamer1.0-plugins-good-dbg 
+      - gstreamer1.0-plugins-base-dbg
+      - gstreamer1.0-plugins-rtp 
+      - gstreamer1.0-nice 
+      - libgstreamer1.0-0-dbg 
+      - gstreamer1.0-python3-dbg-plugin-loader 
+      - python3-gst-1.0 
+      - gir1.2-gst-rtsp-server-1.0
+      - librust-openssl-dev 
+      - rustc 
+      - cargo
+
 env:
   global:
-  - AWS_DEFAULT_REGION=eu-central-1 CF_TEMPLATE=cloudformation/cloudcam.yml
-  - TOOLS_IMAGE=somebodyelse/cloudcam
+  - AWS_DEFAULT_REGION=eu-central-1
   - secure: F6TIHOy75Zj+F3SB+MZcOoVL7fhHYOAuT2o1Wex37DhsilWOOgRC3yKAg90iJyROBSik9MeJtO2xJo/thh4fE7X3eFdjY8SRAP/tSh/racK0LpLIagRnM6KrmRYqd1Yi+AWv7GyQpceg/eriNYqt78LEudfV/2oxybhioCV7+B5jg82BNF1fbYdQiJkf6p+ZMGD4vvauUT64iExRu0dbsGuqBJw+mYHOgAgChqJd9iNjBdhJ/N7tCQOoNEN9rHyXfNia1BVnK6BlYsUJBth6jA4eTT9WgZGUmwdXKDvEetWTWSud6+VdpRfENa14BTV9oUR4xb3ynz2rtzqnu/YY6DhkRBPWRHZOPXf4gB/KwPAAKfdNkM56B/DNDLA+aYfCQ/qEnpd/C/yLFdZeG9LtH32I+fwd+Q06m2ifVym3/fKEz9EkMM5jBxuICY3+8EZ8LcaHEKdnHI0UyWcrHY+CiJ0BLu1L/VCER3yC/4UBezzviZm+X75sVfa7jNVDlgQtmlBa/cQ/irYTpRkxeplnNgyNU+f9dsVCq0OeyV8C9PpAtA6NNHQ8TFIB93Iz0XbfaB5pE/W9rgyBIIIdCmuXdl1WVNIgFF6RQvmpBEPRWC6RkNYkb7J11iT1AFShXbb8n2nFfC8XOLEotP5d9qKEGTUPz418ErlFIIwOMQJr6mU=
   - secure: K40hJ/lR8KRBEUGsfIQ+n7fTPaSlrIiSj2Nz8e/jH6djSeP/iZHTMkQyfQXMFxB0nIrBbyRpGgcc6k9J6x31i8qq3peWVRBVtuwc50mses6zzo28OTSSEW9/VnD3YTIyP5DBNbHh217Xt9m2zXQ/I5O9pHEsjSWsh1CVfko/IOIA4eKQoncTbog5ymgAzDB266WX8wL2qCUXaeiDRMOiIJuyDLmDMlKrZOwXbQ58voIZ8MFlHk2yd9Gl97UZbW2skGxRlWWqH0426QNrYOMiDwMhzM3VkKrbi5lRvlzyVg5EKUJoTIxxk74p7kYI8gTBwFrfbjL/gvz4aeThOk5O3muYnz2C7nYj/2XcNHdtcW22CR19qwI6r4muGafSnkXDOTzbGSaawl0x9PA+2PvsB0LGTBwakfQbwzRnJolhk0KX4TzdPamYIBfBEF5aMPi3Cg63h1LkeQzwEPFAz8T2QJNrZvsdWEf5IdBa9MlOOxHYcIFHL22NYw0xnrFPV2L5ALdH4qNxUQ+WRUlHzFURWNWTKKke89FqkXxHB0aGzyrdBI2ldB16QWpDy9N7d9sgqpQ6eqfjfo7j6ZCGh8Cm8f41Cm+VyTNrpBai+iiycNDrDiSRQVGr6yggXSBEInUjoeHy3e1eb/hbf7EEkAuYegthElo7Ochy94xnsNEtIF8=
 language: python
 python:
   - '3.6'
+  - '3.7'
 script:
-  - if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
-  - yamllint -c .yamllint $CF_TEMPLATE
-  - docker run -v $TRAVIS_BUILD_DIR:/cloudcam $TOOLS_IMAGE /bin/bash -c "source ~/.cargo/env && cd /cloudcam/client/rust && cargo build"
-  - docker run -v $TRAVIS_BUILD_DIR:/cloudcam $TOOLS_IMAGE /bin/bash -c "cd /cloudcam && CLOUDCAM_CLIENT=./client/rust/target/debug/cloudcam RUST_LOG=info pytest test"
-  - docker run -v $TRAVIS_BUILD_DIR:/cloudcam $TOOLS_IMAGE /bin/bash -c "cd /cloudcam/client/c && make all"
-  - docker run -v $TRAVIS_BUILD_DIR:/cloudcam $TOOLS_IMAGE /bin/bash -c "cd /cloudcam && CLOUDCAM_CLIENT=./client/c/cloudcam pytest test"
+  # - if [ ! -z `aws configure get aws_access_key_id` ]; then aws cloudformation validate-template --template-body file://$CF_TEMPLATE; fi
+  # - yamllint -c .yamllint cloudformation/*.yml
+  - cd /cloudcam/client/rust && cargo build
+  - echo "Rust client built"
+  - cd /cloudcam && CLOUDCAM_CLIENT=./client/rust/target/debug/cloudcam RUST_LOG=info pytest test
+  - echo "Rust client tested"
+  - cd /cloudcam/client/c && make all
+  - echo "C client built"
+  - cd /cloudcam && CLOUDCAM_CLIENT=./client/c/cloudcam pytest test
+  - echo "C client tested"
 install:
-  - pip install --upgrade awscli yamllint
-  - docker pull $TOOLS_IMAGE
-deploy:
-  provider: script
-  script: cloudformation/deploy-stack-travis.sh
-  on:
-    branch: master
-  access_key_id: $AWS_ACCESS_KEY_ID
-  secret_access_key:
-    secure: $AWS_SECRET_ACCESS_KEY
+  - pip3 install --upgrade paho-mqtt Pillow cherrypy
+  # - docker pull $TOOLS_IMAGE
+# deploy:
+#   provider: script
+#   script: cloudformation/deploy-stack-travis.sh
+#   on:
+#     branch: master
+#   access_key_id: $AWS_ACCESS_KEY_ID
+#   secret_access_key:
+#     secure: $AWS_SECRET_ACCESS_KEY
 after_success:
   - echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
-  - echo "Cloudformation template validated"
-  - echo "YAML linted"
-  - echo "Rust client built"
-  - echo "Rust client tested"
-  - echo "C client built"
-  - echo "C client tested"
+  # - echo "Cloudformation template validated"
+  # - echo "YAML linted"
 notifications:
   email:
     on_success: never

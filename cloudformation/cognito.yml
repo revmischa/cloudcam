@@ -1,0 +1,164 @@
+---
+Resources:
+  CognitoWebRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref CognitoIdentityPool
+      Policies:
+        - PolicyName: !Sub '#{AWS::StackName}-CognitoWebRole'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iot:Connect
+                  - iot:Subscribe
+                  - iot:Publish
+                  - iot:Receive
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:#{AWS::StackName}*"
+                  # - !GetAtt IoTListThingsLambdaFunction.Arn
+                  # - !GetAtt IoTProvisionThingLambdaFunction.Arn
+                  # - !GetAtt IoTAttachThingPolicyLambdaFunction.Arn
+                  # - !GetAtt JanusStartStreamLambdaFunction.Arn
+                  # - !GetAtt JanusStopStreamLambdaFunction.Arn
+                  # - !GetAtt ThumbStoreLambdaFunction.Arn
+
+  CognitoIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref CognitoClient
+          ProviderName: !GetAtt [CognitoUserPool, ProviderName]
+      CognitoEvents:
+        SyncTrigger: !GetAtt [CognitoPresignupLambdaFunction, Arn]
+  CognitoIdentityPoolRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref CognitoIdentityPool
+      Roles:
+        authenticated: !GetAtt [CognitoWebRole, Arn]
+
+  CognitoPresignupLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt [CognitoPresignupLambdaFunction, Arn]
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt [CognitoUserPool, Arn]
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    Properties:
+      UserPoolName: !Sub '#{AWS::StackName}'
+      LambdaConfig:
+        PreSignUp: !GetAtt [CognitoPresignupLambdaFunction, Arn]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 6
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
+      # AutoVerifiedAttributes:
+        # - email
+      UsernameAttributes:
+        - email
+      MfaConfiguration: OFF
+      DeviceConfiguration:
+        ChallengeRequiredOnNewDevice: false
+        DeviceOnlyRememberedOnUserPrompt: false
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: given_name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: family_name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: middle_name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: nickname
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: picture
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: website
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email_verified
+          AttributeDataType: Boolean
+          Mutable: true
+          Required: false
+        - Name: gender
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: birthdate
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: zoneinfo
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: locale
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: phone_number
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: phone_verified
+          AttributeDataType: Boolean
+          Mutable: true
+          Required: false
+        - Name: address
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: updated_at
+          AttributeDataType: Number
+          Mutable: true
+          Required: false
+          NumberAttributeConstraints:
+            MinValue: '0'
+  # client - with clientID
+  # used by web
+  CognitoClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '#{AWS::StackName}UserPoolClient'
+      GenerateSecret: false
+      UserPoolId: !Ref CognitoUserPool

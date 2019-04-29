@@ -1,0 +1,15 @@
+Resources:
+  ThumbBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '#{AWS::StackName}-thumbs'
+
+
+  # can be deleted probably...
+  UiBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      BucketName: ${self:custom.cloudcam.ui_bucket_name}
