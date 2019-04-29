@@ -17,22 +17,22 @@ addons:
       - ppa:ddalex/gstreamer
     packages:
       - build-essential
-      - libssl-dev 
-      - libcurl4-openssl-dev 
+      - libssl-dev
+      - libcurl4-openssl-dev
       - mosquitto
       - libgstreamer1.0-dev
-      - gstreamer1.0-plugins-ugly-dbg 
-      - gstreamer1.0-plugins-bad-dbg 
-      - gstreamer1.0-plugins-good-dbg 
+      - gstreamer1.0-plugins-ugly-dbg
+      - gstreamer1.0-plugins-bad-dbg
+      - gstreamer1.0-plugins-good-dbg
       - gstreamer1.0-plugins-base-dbg
-      # - gstreamer1.0-plugins-rtp 
-      - gstreamer1.0-nice 
-      - libgstreamer1.0-0-dbg 
-      # - gstreamer1.0-python3-dbg-plugin-loader 
-      - python3-gst-1.0 
+      # - gstreamer1.0-plugins-rtp
+      - gstreamer1.0-nice
+      - libgstreamer1.0-0-dbg
+      # - gstreamer1.0-python3-dbg-plugin-loader
+      - python3-gst-1.0
       - gir1.2-gst-rtsp-server-1.0
       # - librust-openssl-dev
-      - rustc 
+      - rustc
       - cargo
 
 env:
@@ -50,13 +50,13 @@ script:
   - cd $TRAVIS_BUILD_DIR/client/rust
   - cargo build
   - echo "Rust client built"
-  - cd $TRAVIS_BUILD_DIR/cloudcam
+  - cd $TRAVIS_BUILD_DIR
   - CLOUDCAM_CLIENT=$TRAVIS_BUILD_DIR/client/rust/target/debug/cloudcam RUST_LOG=info pytest test
   - echo "Rust client tested"
-  - cd $TRAVIS_BUILD_DIR/cloudcam/client/c 
+  - cd $TRAVIS_BUILD_DIR/client/c
   - make all
   - echo "C client built"
-  - cd $TRAVIS_BUILD_DIR 
+  - cd $TRAVIS_BUILD_DIR
   - CLOUDCAM_CLIENT=$TRAVIS_BUILD_DIR/client/c/cloudcam pytest test
   - echo "C client tested"
 install:
